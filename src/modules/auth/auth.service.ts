@@ -1,0 +1,245 @@
+import { EnvKey } from '@constants/env.constant';
+import { AccessMethod, UserStatus } from '@constants/user.constant';
+import { UserEntity } from '@database/entities/user-entity';
+import { UserRepository } from '@database/repository/user.repository';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
+import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import * as bcrypt from 'bcrypt';
+import { plainToInstance } from 'class-transformer';
+import { Transactional } from 'typeorm-transactional';
+import { parseDuration } from 'utils/util';
+import {
+  LoginBodyRequestDto,
+  RefreshTokenRequestDto,
+  RegisterRequestDto,
+} from './dtos/auth.request.dto';
+import {
+  LoginResponseDto,
+  RefreshTokenResponseDto,
+  RegisterResponseDto,
+} from './dtos/auth.response.dto';
+
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  // Hash password
+  async hashPassword(password: string): Promise<string> {
+    return await bcrypt.hash(password, 12);
+  }
+
+  // Compare password
+  async comparePassword(
+    password: string,
+    storePasswordHash: string,
+  ): Promise<boolean> {
+    return await bcrypt.compare(password, storePasswordHash);
+  }
+
+  // Validate user (used by local strategy if needed, returning partial user)
+  async validateUser(
+    email: string,
+    pass: string,
+  ): Promise<Partial<UserEntity> | null> {
+    const user = await this.userRepository.findOneBy({ email });
+    if (user && (await this.comparePassword(pass, user.password))) {
+      const { password: _password, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  // Generate JWT Token
+  private async generateToken(payload: JwtPayloadDto) {
+    const refreshTokenSecret = this.configService.getOrThrow<string>(
+      EnvKey.JWT_REFRESH_SECRET_KEY,
+    );
+    const refreshTokenExpiresIn = this.configService.getOrThrow<string>(
+      EnvKey.JWT_REFRESH_TOKEN_EXPIRE,
+    );
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, {
+        secret: refreshTokenSecret,
+        expiresIn: parseDuration(refreshTokenExpiresIn),
+      }),
+    ]);
+
+    return { accessToken, refreshToken };
+  }
+
+  // Register
+  async register(dto: RegisterRequestDto): Promise<RegisterResponseDto> {
+    const { email, username, password } = dto;
+    const account = await this.userRepository.findOneBy({ email });
+    if (account) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_EXISTED.message,
+        httpErrors.ACCOUNT_EXISTED.code,
+      );
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+    const newUser = this.userRepository.create({
+      email,
+      username,
+      password: hashedPassword,
+      accessMethod: AccessMethod.EMAIL,
+      status: UserStatus.ACTIVE,
+    });
+    await this.userRepository.save(newUser);
+
+    return plainToInstance(RegisterResponseDto, newUser, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  // Login with Email/Password
+  async signIn(dto: LoginBodyRequestDto): Promise<LoginResponseDto> {
+    const user = await this.userRepository.findOneBy({ email: dto.email });
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    const isMatch = await this.comparePassword(dto.password, user.password);
+    if (!isMatch) {
+      throw new httpBadRequest(
+        httpErrors.INVALID_CREDENTIALS.message,
+        httpErrors.INVALID_CREDENTIALS.code,
+      );
+    }
+
+    if (user.status === UserStatus.INACTIVE) {
+      user.status = UserStatus.ACTIVE;
+      await this.userRepository.update(user.id, { status: UserStatus.ACTIVE });
+    } else if (user.status === UserStatus.BLOCKED) {
+      throw new httpBadRequest(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+
+    return this.login(user);
+  }
+
+  // Login/Register with Google
+  @Transactional()
+  async googleLogin(req: any): Promise<LoginResponseDto | null> {
+    if (!req.user) return null;
+    const { email, googleId } = req.user;
+    this.logger.log(`Google Login Attempt: ${email} (${googleId})`);
+
+    let user = await this.userRepository.findOneBy({ googleId });
+
+    if (!user) {
+      // Check if user exists with the same email
+      user = await this.userRepository.findOneBy({ email });
+      if (user) {
+        // Link googleId to existing user
+        user.googleId = googleId;
+        if (user.status === UserStatus.INACTIVE) {
+          user.status = UserStatus.ACTIVE;
+        } else if (user.status === UserStatus.BLOCKED) {
+          throw new httpBadRequest(
+            httpErrors.BLOCKED_USER.message,
+            httpErrors.BLOCKED_USER.code,
+          );
+        }
+        await this.userRepository.save(user);
+      } else {
+        // Create new user
+        user = this.userRepository.create({
+          email,
+          googleId,
+          accessMethod: AccessMethod.GOOGLE,
+          status: UserStatus.ACTIVE,
+        });
+        await this.userRepository.save(user);
+      }
+    }
+
+    return this.login(user);
+  }
+
+  // Core login logic for all methods
+  async login(user: UserEntity): Promise<LoginResponseDto> {
+    const payload: JwtPayloadDto = {
+      email: user.email,
+      id: user.id,
+      status: UserStatus.ACTIVE,
+      role: user.role,
+    };
+    const { accessToken, refreshToken } = await this.generateToken(payload);
+
+    return plainToInstance(LoginResponseDto, {
+      accessToken,
+      refreshToken,
+      userId: user.id,
+    });
+  }
+
+  // Logout
+  async logout(userId: number): Promise<boolean> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    if (user.status === UserStatus.INACTIVE) {
+      throw new httpBadRequest(
+        httpErrors.ALREADY_LOGOUT.message,
+        httpErrors.ALREADY_LOGOUT.code,
+      );
+    }
+
+    await this.userRepository.update(userId, { status: UserStatus.INACTIVE });
+    return true;
+  }
+
+  // Refresh token
+  async refreshToken(
+    data: RefreshTokenRequestDto,
+  ): Promise<RefreshTokenResponseDto> {
+    const { refreshToken } = data;
+    const decodedData: JwtPayloadDto = await this.jwtService.verifyAsync(
+      refreshToken,
+      {
+        secret: this.configService.getOrThrow(EnvKey.JWT_REFRESH_SECRET_KEY),
+      },
+    );
+
+    const user = await this.userRepository.findOneBy({ id: decodedData.id });
+
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    const payload: JwtPayloadDto = {
+      id: user.id,
+      email: user.email,
+      status: user.status,
+      role: user.role,
+    };
+
+    return this.generateToken(payload);
+  }
+}

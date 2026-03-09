@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+      "module": "commonjs",
+      "declaration": true,
+      "removeComments": true,
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "allowSyntheticDefaultImports": true,
+      "target": "es2017",
+      "sourceMap": true,
+      "outDir": "./dist",
+      "baseUrl": "./src",
+      "incremental": true,
+      "allowJs": true,
+      "resolveJsonModule": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "paths": {
+          "@configs/*": ["configs/*"],
+          "@constants/*": ["constants/*"],
+          "@entities/*": ["entities/*"],
+          "@guards/*": ["guards/*"],
+          "@models/*": ["models/*"],
+          "@modules/*": ["modules/*"],
+          "@repositories/*": ["repositories/*"],
+          "@shared/*": ["shared/*"],
+          "@database/*": ["database/*"]
+      }
+  },
+  "ts-node": {
+      "require": ["tsconfig-paths/register"],
+      "transpileOnly": true,
+      "files": true,
+      "compilerOptions": {
+          "module": "commonjs"
+      }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts", "dist"],
+  "copyFiles": ["src/**/*.hbs", "src/**/*.xlsx"]
+}

@@ -1,0 +1,34 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15.3-alpine3.18
+    ports:
+      - '5432:5432'
+    volumes:
+      - ChatMessagePostgresData:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - ChatMessageNetwork
+  api:
+    image: fypher-main:${IMAGE_TAG:-develop}
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    networks:
+      - ChatMessageNetwork
+
+volumes:
+  ChatMessagePostgresData:
+
+networks:
+  ChatMessageNetwork:
+    name: ChatMessageNetwork
+    driver: overlay
+    attachable: true
