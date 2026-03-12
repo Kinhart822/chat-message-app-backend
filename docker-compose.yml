@@ -6,7 +6,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ChatMessagePostgresData:/var/lib/postgresql/data
+      - TekChatPostgresData:/var/lib/postgresql/data
     env_file:
       - .env
     environment:
@@ -14,21 +14,35 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     networks:
-      - ChatMessageNetwork
-  api:
-    image: fypher-main:${IMAGE_TAG:-develop}
+      - TekChatNetwork
+  redis:
+    image: redis:7.2-alpine
+    restart: always
     ports:
-      - '3000:3000'
+      - '${REDIS_PORT:-6379}:6379'
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - TekChatRedisData:/data
+    networks:
+      - TekChatNetwork
+  api:
+    image: tekchat-main:${IMAGE_TAG:-develop}
+    ports:
+      - '${PORT:-3000}:3000'
     env_file:
       - .env
+    depends_on:
+      - postgres
+      - redis
     networks:
-      - ChatMessageNetwork
+      - TekChatNetwork
 
 volumes:
-  ChatMessagePostgresData:
+  TekChatPostgresData:
+  TekChatRedisData:
 
 networks:
-  ChatMessageNetwork:
-    name: ChatMessageNetwork
-    driver: overlay
+  TekChatNetwork:
+    name: TekChatNetwork
+    driver: bridge
     attachable: true

@@ -1,6 +1,7 @@
+import { IMailType } from '@constants/mail.constant';
 import { ApiProperty } from '@nestjs/swagger';
 import { StringField } from '@shared/decorators/field.decorator';
-import { IsEmail, IsJWT, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsEnum, IsJWT, IsNotEmpty } from 'class-validator';
 
 export class EmailBodyRequestDto {
   @IsEmail()
@@ -64,4 +65,25 @@ export class VerifyEmailCodeRequestDto extends EmailBodyRequestDto {
     example: '123456',
   })
   code: string;
+}
+
+export class ResendCodeRequestDto extends EmailBodyRequestDto {
+  @IsNotEmpty()
+  @IsEnum(IMailType)
+  @ApiProperty({
+    enum: IMailType,
+    description: 'Type of mail action',
+    example: IMailType.SIGN_UP,
+  })
+  type: IMailType;
+}
+
+export class ResetPasswordRequestDto extends VerifyEmailCodeRequestDto {
+  @StringField()
+  @ApiProperty({
+    type: String,
+    description: 'New password',
+    example: 'new_password123',
+  })
+  password: string;
 }

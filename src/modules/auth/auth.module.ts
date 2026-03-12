@@ -11,10 +11,12 @@ import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     TypeOrmExModule.forCustomRepository([UserRepository]),
+    MailModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

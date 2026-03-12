@@ -1,5 +1,13 @@
 import { EnvKey } from '@constants/env.constant';
-import { AccessMethod, UserStatus } from '@constants/user.constant';
+import {
+  AccessMethod,
+  FORGOT_RES,
+  LOGOUT_RES,
+  RESEND_RES,
+  RESET_PASSWORD_RES,
+  UserStatus,
+  VERIFY_ACCOUNT_RES,
+} from '@constants/user.constant';
 import { UserEntity } from '@database/entities/user-entity';
 import { UserRepository } from '@database/repository/user.repository';
 import { Injectable, Logger } from '@nestjs/common';
@@ -12,15 +20,21 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 import { parseDuration } from 'utils/util';
 import {
+  EmailBodyRequestDto,
   LoginBodyRequestDto,
   RefreshTokenRequestDto,
   RegisterRequestDto,
+  ResendCodeRequestDto,
+  ResetPasswordRequestDto,
 } from './dtos/auth.request.dto';
 import {
   LoginResponseDto,
   RefreshTokenResponseDto,
   RegisterResponseDto,
 } from './dtos/auth.response.dto';
+
+import { IMailType } from '@constants/mail.constant';
+import { MailService } from '@modules/mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +44,7 @@ export class AuthService {
     private readonly userRepository: UserRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   // Hash password
@@ -45,7 +60,7 @@ export class AuthService {
     return await bcrypt.compare(password, storePasswordHash);
   }
 
-  // Validate user (used by local strategy if needed, returning partial user)
+  // Validate user
   async validateUser(
     email: string,
     pass: string,
@@ -95,13 +110,106 @@ export class AuthService {
       username,
       password: hashedPassword,
       accessMethod: AccessMethod.EMAIL,
-      status: UserStatus.ACTIVE,
+      status: UserStatus.PENDING, // Default to PENDING until email is verified
     });
     await this.userRepository.save(newUser);
+
+    // Send OTP for email verification
+    await this.mailService.generateAndSendOTP(email, IMailType.SIGN_UP);
 
     return plainToInstance(RegisterResponseDto, newUser, {
       excludeExtraneousValues: true,
     });
+  }
+
+  // Forgot Password
+  async forgotPassword(dto: EmailBodyRequestDto): Promise<any> {
+    const user = await this.userRepository.findOneBy({ email: dto.email });
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+      throw new httpBadRequest(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+
+    // Send OTP for forgot password
+    await this.mailService.generateAndSendOTP(
+      dto.email,
+      IMailType.FORGOT_PASSWORD,
+    );
+
+    return { message: FORGOT_RES };
+  }
+
+  // Resend Code
+  async resendCode(dto: ResendCodeRequestDto): Promise<any> {
+    const { email, type } = dto;
+    const user = await this.userRepository.findOneBy({ email });
+
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+      throw new httpBadRequest(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+
+    // Only allow resending SIGN_UP code if user is still PENDING
+    if (type === IMailType.SIGN_UP && user.status !== UserStatus.PENDING) {
+      throw new httpBadRequest(
+        httpErrors.ALREADY_VERIFIED.message,
+        httpErrors.ALREADY_VERIFIED.code,
+      );
+    }
+
+    await this.mailService.generateAndSendOTP(email, type);
+
+    return { message: RESEND_RES(type) };
+  }
+
+  // Reset Password
+  @Transactional()
+  async resetPassword(dto: ResetPasswordRequestDto): Promise<any> {
+    const { email, code, password } = dto;
+
+    const isVerified = await this.mailService.verifyOTP(
+      email,
+      code,
+      IMailType.FORGOT_PASSWORD,
+    );
+
+    if (!isVerified) {
+      throw new httpBadRequest(
+        httpErrors.INVALID_OTP.message,
+        httpErrors.INVALID_OTP.code,
+      );
+    }
+
+    const user = await this.userRepository.findOneBy({ email });
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+    await this.userRepository.update(user.id, { password: hashedPassword });
+
+    return { message: RESET_PASSWORD_RES };
   }
 
   // Login with Email/Password
@@ -122,7 +230,12 @@ export class AuthService {
       );
     }
 
-    if (user.status === UserStatus.INACTIVE) {
+    if (user.status === UserStatus.PENDING) {
+      throw new httpBadRequest(
+        httpErrors.PENDING_VERIFICATION.message,
+        httpErrors.PENDING_VERIFICATION.code,
+      );
+    } else if (user.status === UserStatus.INACTIVE) {
       user.status = UserStatus.ACTIVE;
       await this.userRepository.update(user.id, { status: UserStatus.ACTIVE });
     } else if (user.status === UserStatus.BLOCKED) {
@@ -192,7 +305,7 @@ export class AuthService {
   }
 
   // Logout
-  async logout(userId: number): Promise<boolean> {
+  async logout(userId: number): Promise<any> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
       throw new httpBadRequest(
@@ -209,7 +322,41 @@ export class AuthService {
     }
 
     await this.userRepository.update(userId, { status: UserStatus.INACTIVE });
-    return true;
+    return { message: LOGOUT_RES };
+  }
+
+  /**
+   * Verify OTP and execute pre-defined action
+   */
+  @Transactional()
+  async verifyOtpAndExecuteAction(
+    email: string,
+    code: string,
+    type: IMailType,
+  ) {
+    const isVerified = await this.mailService.verifyOTP(email, code, type);
+    if (!isVerified) {
+      throw new httpBadRequest(
+        httpErrors.INVALID_OTP.message,
+        httpErrors.INVALID_OTP.code,
+      );
+    }
+
+    const user = await this.userRepository.findOneBy({ email });
+    if (!user) {
+      throw new httpBadRequest(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+
+    switch (type) {
+      case IMailType.SIGN_UP:
+      case IMailType.FORGOT_PASSWORD:
+        return { message: VERIFY_ACCOUNT_RES(type) };
+      default:
+        return { message: 'OTP verified.' };
+    }
   }
 
   // Refresh token

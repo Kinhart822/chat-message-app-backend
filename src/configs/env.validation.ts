@@ -51,6 +51,19 @@ class EnvironmentVariables {
   @Type(() => Number)
   @IsOptional()
   CHAIN_ID: number;
+
+  @IsString()
+  @IsOptional()
+  REDIS_HOST: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  REDIS_PORT: number;
+
+  @IsString()
+  @IsOptional()
+  REDIS_PASSWORD: string;
 }
 
 export function validate(config: Record<string, unknown>) {

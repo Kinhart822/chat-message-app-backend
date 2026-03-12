@@ -18,11 +18,11 @@
       "paths": {
           "@configs/*": ["configs/*"],
           "@constants/*": ["constants/*"],
-          "@entities/*": ["entities/*"],
+          "@entities/*": ["database/entities/*"],
           "@guards/*": ["guards/*"],
           "@models/*": ["models/*"],
           "@modules/*": ["modules/*"],
-          "@repositories/*": ["repositories/*"],
+          "@repositories/*": ["database/repository/*"],
           "@shared/*": ["shared/*"],
           "@database/*": ["database/*"]
       }

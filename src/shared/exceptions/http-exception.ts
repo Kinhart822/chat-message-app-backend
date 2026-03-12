@@ -116,4 +116,16 @@ export const httpErrors = {
     message: 'Invalid email or password.',
     code: 'INVALID_CREDENTIALS',
   },
+  ALREADY_VERIFIED: {
+    message: 'User is already verified.',
+    code: 'ALREADY_VERIFIED',
+  },
+  PENDING_VERIFICATION: {
+    message: 'User is pending verification. Please verify your email.',
+    code: 'PENDING_VERIFICATION',
+  },
+  INVALID_OTP: {
+    message: 'Invalid or expired verification code',
+    code: 'INVALID_OTP',
+  },
 };
