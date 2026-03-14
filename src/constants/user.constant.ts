@@ -2,9 +2,9 @@ import { IMailType } from './mail.constant';
 
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
-  PENDING = 'PENDING',
   INACTIVE = 'INACTIVE',
   BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
 }
 
 export enum RoleUser {
@@ -15,6 +15,69 @@ export enum RoleUser {
 export enum AccessMethod {
   EMAIL = 'EMAIL',
   GOOGLE = 'GOOGLE',
+}
+
+export enum MediaType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  FILE = 'FILE',
+  AUDIO = 'AUDIO',
+}
+
+export enum ConversationType {
+  DIRECT = 'DIRECT',
+  GROUP = 'GROUP',
+}
+
+export enum ConversationStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
+}
+
+export enum ParticipantRole {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
+}
+
+export enum ParticipantStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  LEFT = 'LEFT',
+  KICKED = 'KICKED',
+  BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
+}
+
+export enum JoinGroupRequestProcessStatus {
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum MessageType {
+  TEXT = 'TEXT',
+  ATTACHMENT = 'ATTACHMENT',
+  SYSTEM = 'SYSTEM',
+}
+
+export enum MessageStatus {
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}
+
+export enum MessageAttachmentType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  AUDIO = 'AUDIO',
+  FILE = 'FILE',
+}
+
+export enum MessageAttachmentStatus {
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+  PENDING = 'PENDING',
+  DELETED = 'DELETED',
 }
 
 export const FORGOT_RES = 'OTP for password reset has been sent to your email.';

@@ -34,7 +34,7 @@ import { MailService } from './mail.service';
           },
         },
         defaults: {
-          from: `"TekChat" <${configService.get<string>('MAIL_FROM')}>`,
+          from: `${configService.get<string>('MAIL_FROM')}`,
         },
         template: {
           dir: join(__dirname, 'templates'),

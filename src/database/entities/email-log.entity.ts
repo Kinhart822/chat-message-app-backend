@@ -1,5 +1,5 @@
 import { Column, DeepPartial, Entity } from 'typeorm';
-import { BaseEntity } from './base-entity';
+import { BaseEntity } from '../../shared/base-entity';
 
 @Entity('email_logs')
 export class EmailLogEntity extends BaseEntity {

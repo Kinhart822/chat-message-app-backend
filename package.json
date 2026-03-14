@@ -29,6 +29,7 @@
     "migration:show": "yarn typeorm migration:show"
   },
   "dependencies": {
+    "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.1.13",
@@ -42,12 +43,15 @@
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.16",
     "@socket.io/redis-emitter": "^5.1.0",
+    "@types/multer": "^2.1.0",
     "@types/nodemailer": "^7.0.11",
     "bcrypt": "^6.0.0",
+    "buffer-to-stream": "^1.0.0",
     "cache-manager": "^7.2.8",
     "cache-manager-redis-yet": "^5.1.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "cloudinary": "^2.9.0",
     "handlebars": "^4.7.8",
     "lint-staged": "^16.3.2",
     "nodemailer": "^8.0.2",

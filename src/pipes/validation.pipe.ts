@@ -14,8 +14,28 @@ export class ValidationCustomPipe implements PipeTransform {
       return value;
     }
 
+    if (value === undefined || value === null) {
+      value = {};
+    }
+
     const object = plainToInstance(metatype, value);
-    const errors = await validate(object);
+    if (typeof object !== 'object' || object === null) {
+      throw new BadRequestException(
+        'Validation failed: payload must be an object',
+      );
+    }
+
+    console.log(
+      `[ValidationCustomPipe] metatype: ${metatype?.name}, value: ${JSON.stringify(value)}, object: ${JSON.stringify(object)}\n`,
+    );
+
+    let errors: any[] = [];
+    try {
+      errors = await validate(object);
+    } catch (err) {
+      console.log(`[ERROR] validate threw: ${err.message}\n${err.stack}\n`);
+      throw err;
+    }
 
     if (errors.length > 0) {
       const firstError = errors[0];

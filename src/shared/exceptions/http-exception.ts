@@ -72,6 +72,10 @@ export const httpErrors = {
   },
 
   // user error
+  INVALID_USER_ID: {
+    message: 'Invalid user ID.',
+    code: 'INVALID_USER_ID',
+  },
   ACCOUNT_NOT_FOUND: {
     message: 'Account not found.',
     code: 'ACCOUNT_NOT_FOUND',
@@ -127,5 +131,173 @@ export const httpErrors = {
   INVALID_OTP: {
     message: 'Invalid or expired verification code',
     code: 'INVALID_OTP',
+  },
+  INVALID_REGISTER_OTP: {
+    message:
+      'Registration data not found or has expired. Please register again.',
+    code: 'INVALID_REGISTER_OTP',
+  },
+  TOO_MANY_RESENDS: {
+    message: 'Too many OTP resends. Please wait until the current OTP expires.',
+    code: 'TOO_MANY_RESENDS',
+  },
+  OTP_ALREADY_SENT: {
+    message:
+      'An OTP has already been sent to this email. Please use the resend function if you did not receive it.',
+    code: 'OTP_ALREADY_SENT',
+  },
+
+  // conversation error
+  CONVERSATION_NOT_FOUND: {
+    message: 'Conversation not found.',
+    code: 'CONVERSATION_NOT_FOUND',
+  },
+  CONVERSATION_EXISTED: {
+    message: 'Conversation already existed.',
+    code: 'CONVERSATION_EXISTED',
+  },
+  CANNOT_CREATE_SELF_CONVERSATION: {
+    message: 'Cannot create conversation with yourself.',
+    code: 'CANNOT_CREATE_SELF_CONVERSATION',
+  },
+  INVALID_PARTICIPANTS: {
+    message: 'Invalid participants.',
+    code: 'INVALID_PARTICIPANTS',
+  },
+  CANNOT_ADD_BLOCKED_OR_DELETED_MEMBER: {
+    message: 'Cannot add blocked or deleted member to conversation.',
+    code: 'CANNOT_ADD_BLOCKED_OR_DELETED_MEMBER',
+  },
+  CANNOT_CHANGE_OWNER_DIRECT_CONVERSATION: {
+    message: 'Cannot change owner of direct conversation.',
+    code: 'CANNOT_CHANGE_OWNER_DIRECT_CONVERSATION',
+  },
+  NOT_OWNER_OF_CONVERSATION: {
+    message: 'You are not owner of this conversation.',
+    code: 'NOT_OWNER_OF_CONVERSATION',
+  },
+  NOT_PARTICIPANT_OF_CONVERSATION: {
+    message: 'You are not participant of this conversation.',
+    code: 'NOT_PARTICIPANT_OF_CONVERSATION',
+  },
+  ALREADY_PARTICIPANT_OF_CONVERSATION: {
+    message: 'Already participant of this conversation.',
+    code: 'ALREADY_PARTICIPANT_OF_CONVERSATION',
+  },
+  CANNOT_LEAVE_GROUP_AS_OWNER: {
+    message: 'You are owner of this group. Cannot leave group.',
+    code: 'CANNOT_LEAVE_GROUP_AS_OWNER',
+  },
+  CANNOT_BLOCK_GROUP: {
+    message: 'Cannot block group.',
+    code: 'CANNOT_BLOCK_GROUP',
+  },
+  CANNOT_KICK_OWNER: {
+    message: 'Cannot kick owner of group.',
+    code: 'CANNOT_KICK_OWNER',
+  },
+  JOIN_REQUEST_NOT_FOUND: {
+    message: 'Join group request not found.',
+    code: 'JOIN_REQUEST_NOT_FOUND',
+  },
+  JOIN_REQUEST_ALREADY_PENDING: {
+    message: 'You already have a pending join request for this group.',
+    code: 'JOIN_REQUEST_ALREADY_PENDING',
+  },
+  JOIN_REQUEST_ALREADY_PROCESSED: {
+    message: 'This join request has already been processed.',
+    code: 'JOIN_REQUEST_ALREADY_PROCESSED',
+  },
+  CANNOT_JOIN_DIRECT_CONVERSATION: {
+    message: 'Cannot send join request to a direct conversation.',
+    code: 'CANNOT_JOIN_DIRECT_CONVERSATION',
+  },
+  FILE_UPLOAD_FAILED: {
+    message: 'File upload failed.',
+    code: 'FILE_UPLOAD_FAILED',
+  },
+  CONVERSATION_NOT_ARCHIVED: {
+    message: 'Conversation is not archived.',
+    code: 'CONVERSATION_NOT_ARCHIVED',
+  },
+  CONVERSATION_ALREADY_ARCHIVED: {
+    message: 'Conversation is already archived.',
+    code: 'CONVERSATION_ALREADY_ARCHIVED',
+  },
+  CONVERSATION_ALREADY_PINNED: {
+    message: 'Conversation is already pinned.',
+    code: 'CONVERSATION_ALREADY_PINNED',
+  },
+  CONVERSATION_NOT_PINNED: {
+    message: 'Conversation is not pinned.',
+    code: 'CONVERSATION_NOT_PINNED',
+  },
+  CONVERSATION_ALREADY_BLOCKED: {
+    message: 'Conversation is already blocked.',
+    code: 'CONVERSATION_ALREADY_BLOCKED',
+  },
+  CONVERSATION_NOT_BLOCKED: {
+    message: 'Conversation is not blocked.',
+    code: 'CONVERSATION_NOT_BLOCKED',
+  },
+  MEMBER_ALREADY_KICKED: {
+    message: 'Member is already kicked.',
+    code: 'MEMBER_ALREADY_KICKED',
+  },
+  CANNOT_REJOIN_BLOCKED_OR_DELETED_PARTICIPANT: {
+    message: 'Cannot rejoin blocked or deleted participant.',
+    code: 'CANNOT_REJOIN_BLOCKED_OR_DELETED_PARTICIPANT',
+  },
+
+  // message error
+  MESSAGE_NOT_FOUND: {
+    message: 'Message not found.',
+    code: 'MESSAGE_NOT_FOUND',
+  },
+  MESSAGE_CONTENT_REQUIRED: {
+    message: 'Message content is required.',
+    code: 'MESSAGE_CONTENT_REQUIRED',
+  },
+  MESSAGE_CONTENT_TOO_LONG: {
+    message: 'Message content is too long (max 4000 characters).',
+    code: 'MESSAGE_CONTENT_TOO_LONG',
+  },
+  FILE_TOO_LARGE: (fileName: string) => {
+    return {
+      message: `File ${fileName} is too large.`,
+      code: 'FILE_TOO_LARGE',
+    };
+  },
+  MESSAGE_NOT_IN_CONVERSATION: {
+    message: 'Message is not in conversation.',
+    code: 'MESSAGE_NOT_IN_CONVERSATION',
+  },
+  NOT_SENDER_OF_MESSAGE: {
+    message: 'You are not sender of this message.',
+    code: 'NOT_SENDER_OF_MESSAGE',
+  },
+  MESSAGE_IS_PINNED: {
+    message: 'This message is pinned.',
+    code: 'MESSAGE_IS_PINNED',
+  },
+  MESSAGE_IS_DELETED: {
+    message: 'This message is deleted.',
+    code: 'MESSAGE_IS_DELETED',
+  },
+  MESSAGE_EDIT_LIMIT_EXCEEDED: {
+    message: 'This message has been edited 5 times.',
+    code: 'MESSAGE_EDIT_LIMIT_EXCEEDED',
+  },
+  MESSAGE_EDIT_TIME_LIMIT_EXCEEDED: {
+    message: 'This message can only be edited within 5 minutes.',
+    code: 'MESSAGE_EDIT_TIME_LIMIT_EXCEEDED',
+  },
+  MESSAGE_PIN_NOT_FOUND: {
+    message: 'Pinned message not found.',
+    code: 'MESSAGE_PIN_NOT_FOUND',
+  },
+  CANNOT_UNPIN_OTHERS_MESSAGE: {
+    message: 'You cannot unpin a message pinned by another user.',
+    code: 'CANNOT_UNPIN_OTHERS_MESSAGE',
   },
 };

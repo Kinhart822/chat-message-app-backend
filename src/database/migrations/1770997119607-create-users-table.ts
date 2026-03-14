@@ -4,7 +4,7 @@ export class CreateUsersTable1770997119607 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create Enums
     await queryRunner.query(
-      `CREATE TYPE "user_status_enum" AS ENUM('ACTIVE', 'INACTIVE', 'DELETED')`,
+      `CREATE TYPE "user_status_enum" AS ENUM('ACTIVE', 'INACTIVE', 'BLOCKED', 'DELETED')`,
     );
     await queryRunner.query(
       `CREATE TYPE "access_method_enum" AS ENUM('EMAIL', 'GOOGLE')`,
@@ -20,8 +20,8 @@ export class CreateUsersTable1770997119607 implements MigrationInterface {
                 "email" VARCHAR(255) NOT NULL DEFAULT '',
                 "password" VARCHAR(255),
                 "username" VARCHAR(255),
-                "full_name" VARCHAR(255),
-                "avatar" VARCHAR(255),
+                "avatar_url" VARCHAR(255),
+                "background_url" VARCHAR(255),
                 "description" TEXT,
                 "status" "user_status_enum" NOT NULL DEFAULT 'ACTIVE',
                 "access_method" "access_method_enum" NOT NULL DEFAULT 'EMAIL',

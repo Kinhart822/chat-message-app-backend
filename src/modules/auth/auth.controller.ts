@@ -1,4 +1,3 @@
-import { IMailType } from '@constants/mail.constant';
 import {
   Body,
   Controller,
@@ -48,14 +47,11 @@ export class AuthController {
 
   @Post('verify-otp')
   @PublicRoute()
-  async verifyOtp(
-    @Body() dto: VerifyEmailCodeRequestDto,
-    @Body('type') type: IMailType,
-  ) {
+  async verifyOtp(@Body() dto: VerifyEmailCodeRequestDto) {
     return this.authService.verifyOtpAndExecuteAction(
       dto.email,
       dto.code,
-      type,
+      dto.type,
     );
   }
 
