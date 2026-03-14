@@ -8,6 +8,7 @@ export enum SocketEvent {
   NEW_MESSAGE = 'NEW_MESSAGE',
   EDIT_MESSAGE = 'EDIT_MESSAGE',
   DELETE_MESSAGE = 'DELETE_MESSAGE',
+  MARK_MESSAGE_AS_READ = 'MARK_MESSAGE_AS_READ',
 
   // FRIEND EVENTS
   SEND_FRIEND_REQUEST = 'SEND_FRIEND_REQUEST',
@@ -26,3 +27,5 @@ export enum SocketEvent {
 
 export const getRoomByCode = (code: string) => `room-${code}`;
 export const getUserRoomByEmail = (email: string) => `user-room-${email}`;
+export const getConversationRoomById = (conversationId: number) =>
+  `conversation-room-${conversationId}`;

@@ -8,13 +8,17 @@ import {
   UserStatus,
   VERIFY_ACCOUNT_RES,
 } from '@constants/user.constant';
-import { UserEntity } from '@database/entities/user-entity';
+import { UserEntity } from '@entities/user.entity';
 import { UserRepository } from '@database/repository/user.repository';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
@@ -126,7 +130,7 @@ export class AuthService {
   async forgotPassword(dto: EmailBodyRequestDto): Promise<any> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -154,7 +158,7 @@ export class AuthService {
     const user = await this.userRepository.findOneBy({ email });
 
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -200,7 +204,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOneBy({ email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -216,7 +220,7 @@ export class AuthService {
   async signIn(dto: LoginBodyRequestDto): Promise<LoginResponseDto> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -308,7 +312,7 @@ export class AuthService {
   async logout(userId: number): Promise<any> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -344,7 +348,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOneBy({ email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -374,7 +378,7 @@ export class AuthService {
     const user = await this.userRepository.findOneBy({ id: decodedData.id });
 
     if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );

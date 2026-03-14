@@ -1,4 +1,8 @@
-import { SocketEvent, getUserRoomByEmail } from '@constants/socket.constant';
+import {
+  SocketEvent,
+  getConversationRoomById,
+  getUserRoomByEmail,
+} from '@constants/socket.constant';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Emitter } from '@socket.io/redis-emitter';
 import { RedisClientType } from 'redis';
@@ -27,7 +31,7 @@ export class SocketEmitterService implements OnModuleInit {
   }
 
   /**
-   * Generic method to emit event to a specific user via their email room
+   * Emit event to a user via their email room
    */
   emitEvent(email: string, event: SocketEvent, data: any): void {
     try {
@@ -44,7 +48,6 @@ export class SocketEmitterService implements OnModuleInit {
     }
   }
 
-  // User Events
   emitUserStatusChange(email: string, data: any): void {
     this.emitEvent(email, SocketEvent.USER_STATUS_CHANGE, data);
   }
@@ -57,17 +60,48 @@ export class SocketEmitterService implements OnModuleInit {
     this.emitEvent(email, SocketEvent.PROFILE_STATUS_CHANGE, data);
   }
 
-  // Message Events
-  emitNewMessage(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.NEW_MESSAGE, data);
+  // Emit event to a conversation room
+  emitEventToConversation(
+    conversationId: number,
+    event: SocketEvent,
+    data: any,
+  ): void {
+    try {
+      const room = getConversationRoomById(conversationId);
+      const payload: SocketEventDto = { event, data };
+
+      this.logger.log(`Emitting event ${event} to conversation room ${room}`);
+      this.__emitter.to(room).emit(event, payload);
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit event ${event} to conversation ${conversationId}`,
+        error.stack,
+      );
+    }
   }
 
-  emitEditMessage(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.EDIT_MESSAGE, data);
+  emitNewMessage(conversationId: number, data: any): void {
+    this.emitEventToConversation(conversationId, SocketEvent.NEW_MESSAGE, data);
   }
 
-  emitDeleteMessage(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.DELETE_MESSAGE, data);
+  emitEditMessage(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.EDIT_MESSAGE,
+      data,
+    );
+  }
+
+  emitDeleteMessage(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.DELETE_MESSAGE,
+      data,
+    );
+  }
+
+  emitMarkMessageAsRead(email: string, data: any): void {
+    this.emitEvent(email, SocketEvent.MARK_MESSAGE_AS_READ, data);
   }
 
   // Friend Events
@@ -92,23 +126,35 @@ export class SocketEmitterService implements OnModuleInit {
   }
 
   // Group Events
-  emitCreateGroup(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.CREATE_GROUP, data);
+  emitCreateGroup(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.CREATE_GROUP,
+      data,
+    );
   }
 
-  emitEditGroup(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.EDIT_GROUP, data);
+  emitEditGroup(conversationId: number, data: any): void {
+    this.emitEventToConversation(conversationId, SocketEvent.EDIT_GROUP, data);
   }
 
-  emitAddMemberToGroup(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.ADD_MEMBER_TO_GROUP, data);
+  emitAddMemberToGroup(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.ADD_MEMBER_TO_GROUP,
+      data,
+    );
   }
 
-  emitRemoveMemberFromGroup(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.REMOVE_MEMBER_FROM_GROUP, data);
+  emitRemoveMemberFromGroup(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.REMOVE_MEMBER_FROM_GROUP,
+      data,
+    );
   }
 
-  emitLeaveGroup(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.LEAVE_GROUP, data);
+  emitLeaveGroup(conversationId: number, data: any): void {
+    this.emitEventToConversation(conversationId, SocketEvent.LEAVE_GROUP, data);
   }
 }

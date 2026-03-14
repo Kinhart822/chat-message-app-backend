@@ -1,10 +1,11 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import {
   AccessMethod,
   RoleUser,
   UserStatus,
 } from '../../constants/user.constant';
-import { BaseEntity } from './base-entity';
+import { BaseEntity } from '../../shared/base-entity';
+import { ParticipantEntity } from './participant.entity';
 
 @Entity('users')
 export class UserEntity extends BaseEntity {
@@ -47,4 +48,7 @@ export class UserEntity extends BaseEntity {
     default: RoleUser.USER,
   })
   role: RoleUser;
+
+  @OneToMany(() => ParticipantEntity, (participant) => participant.user)
+  participants: ParticipantEntity[];
 }

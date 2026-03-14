@@ -1,10 +1,10 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
-export class CreateEmailLogsTable1773291465047 implements MigrationInterface {
+export class CreateConversationsTable1773308041710 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: 'email_logs',
+        name: 'conversations',
         columns: [
           {
             name: 'id',
@@ -14,54 +14,72 @@ export class CreateEmailLogsTable1773291465047 implements MigrationInterface {
             generationStrategy: 'increment',
           },
           {
-            name: 'from',
-            type: 'varchar',
-            isNullable: true,
-          },
-          {
-            name: 'to',
-            type: 'varchar',
-            isNullable: true,
-          },
-          {
-            name: 'subject',
-            type: 'varchar',
-            isNullable: true,
-          },
-          {
-            name: 'template',
-            type: 'varchar',
-            isNullable: true,
-          },
-          {
-            name: 'context',
+            name: 'name',
             type: 'varchar',
             isNullable: true,
           },
           {
             name: 'type',
+            type: 'enum',
+            enum: ['DIRECT', 'GROUP'],
+            default: "'DIRECT'",
+          },
+          {
+            name: 'owner_id',
+            type: 'int',
+            isNullable: true,
+          },
+          {
+            name: 'avatar_url',
             type: 'varchar',
             isNullable: true,
           },
           {
             name: 'status',
-            type: 'varchar',
+            type: 'enum',
+            enum: ['ACTIVE', 'BLOCKED', 'DELETED'],
+            default: "'ACTIVE'",
+          },
+          {
+            name: 'last_message_id',
+            type: 'int',
             isNullable: true,
           },
           {
-            name: 'error',
-            type: 'varchar',
+            name: 'last_message_seq',
+            type: 'bigint',
+            isNullable: true,
+          },
+          {
+            name: 'last_message_preview',
+            type: 'text',
+            isNullable: true,
+          },
+          {
+            name: 'last_message_type',
+            type: 'enum',
+            enum: ['TEXT', 'MEDIA', 'SYSTEM'],
+            isNullable: true,
+          },
+          {
+            name: 'last_message_sender_id',
+            type: 'int',
+            isNullable: true,
+          },
+          {
+            name: 'last_message_at',
+            type: 'timestamp',
             isNullable: true,
           },
           {
             name: 'created_at',
             type: 'timestamp',
-            default: 'CURRENT_TIMESTAMP',
+            default: 'now()',
           },
           {
             name: 'updated_at',
             type: 'timestamp',
-            default: 'CURRENT_TIMESTAMP',
+            default: 'now()',
           },
           {
             name: 'deleted_at',
@@ -75,6 +93,6 @@ export class CreateEmailLogsTable1773291465047 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('email_logs');
+    await queryRunner.dropTable('conversations');
   }
 }

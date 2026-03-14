@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
-import { MessageRepository } from '@repositories/message.repository';
 import { ParticipantRepository } from '@repositories/participant.repository';
+import { UserRepository } from '@repositories/user.repository';
+import { SocketEmitterService } from '../socket/socket-emitter.service';
 
 @Injectable()
-export class UserService {
+export class ConversationService {
   constructor(
     private readonly conversationRepository: ConversationRepository,
+    private readonly userRepository: UserRepository,
     private readonly participantRepository: ParticipantRepository,
-    private readonly messageRepository: MessageRepository,
+    private readonly socketEmitterService: SocketEmitterService,
   ) {}
 }

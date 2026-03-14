@@ -5,6 +5,7 @@ export enum UserStatus {
   PENDING = 'PENDING',
   INACTIVE = 'INACTIVE',
   BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
 }
 
 export enum RoleUser {
@@ -15,6 +16,57 @@ export enum RoleUser {
 export enum AccessMethod {
   EMAIL = 'EMAIL',
   GOOGLE = 'GOOGLE',
+}
+
+export enum MediaType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  FILE = 'FILE',
+  AUDIO = 'AUDIO',
+}
+
+export enum ConversationType {
+  DIRECT = 'DIRECT',
+  GROUP = 'GROUP',
+}
+
+export enum ConversationStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
+}
+
+export enum ParticipantRole {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
+}
+
+export enum ParticipantStatus {
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  LEFT = 'LEFT',
+  REMOVED = 'REMOVED',
+  BLOCKED = 'BLOCKED',
+  DELETED = 'DELETED',
+}
+
+export enum MessageType {
+  TEXT = 'TEXT',
+  MEDIA = 'MEDIA',
+  SYSTEM = 'SYSTEM',
+}
+
+export enum MessageStatus {
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+  DELETED = 'DELETED',
+}
+
+export enum MessageAttachmentType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  AUDIO = 'AUDIO',
+  FILE = 'FILE',
 }
 
 export const FORGOT_RES = 'OTP for password reset has been sent to your email.';

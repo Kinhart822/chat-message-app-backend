@@ -4,8 +4,8 @@ import { MessageRepository } from '@repositories/message.repository';
 import { ParticipantRepository } from '@repositories/participant.repository';
 import { UserRepository } from '@repositories/user.repository';
 import { TypeOrmExModule } from '@shared/decorators/typeorm.module';
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
+import { MessageController } from './message.controller';
+import { MessageService } from './message.service';
 
 @Module({
   imports: [
@@ -16,8 +16,8 @@ import { AdminService } from './admin.service';
       ParticipantRepository,
     ]),
   ],
-  controllers: [AdminController],
-  providers: [AdminService],
-  exports: [AdminService],
+  controllers: [MessageController],
+  providers: [MessageService],
+  exports: [MessageService],
 })
-export class AdminModule {}
+export class MessageModule {}
