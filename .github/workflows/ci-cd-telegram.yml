@@ -1,0 +1,100 @@
+name: Deploy-CI with Telegram Notifications
+run-name: ${{ github.actor }} is triggering workflow on ${{ github.ref_name }} 🚀
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+  push:
+    branches:
+      - 'testing'
+      - 'main'
+
+jobs:
+  main-workflow:
+    name: Main Workflow Execution
+    runs-on: [self-hosted, fypher-runner-be]
+    
+    steps:
+      - name: 🛰️ Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: 'yarn'
+
+      - name: 📦 Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 CI Checks (Lint, Test, Build)
+        run: |
+          npm run lint
+          npm run test
+          npm run build
+
+      # --- DEPLOYMENT SECTION ---
+      # - name: 🧰 Prepare environment
+      #   run: |
+      #     echo "${{ vars.FYPHER_MAIN_TESTING_ENV }}" > .env
+      #     echo "GIT_COMMIT=${GITHUB_SHA}" >> .env
+      #     echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      # - name: 🐳 Build Docker image
+      #   run: |
+      #     docker build -t fypher-main:${IMAGE_TAG} .
+
+      # - name: 🐝 Ensure Swarm is initialized
+      #   run: |
+      #     if [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" != "active" ]; then
+      #       docker swarm init
+      #     fi
+
+      # - name: 🚀 Deploy with Docker Swarm
+      #   run: |
+      #     docker stack deploy -c docker-compose.yml fypher-main --with-registry-auth
+
+      - name: 🔍 Get Latest Commit Message
+        id: commit_info
+        if: always()
+        shell: bash
+        run: |
+          commit_msg=$(git log -1 --pretty=format:%s)
+          echo "commit_msg=$commit_msg" >> $GITHUB_OUTPUT
+
+      - name: 📊 Determine Event Status
+        id: event_status
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+              echo "title=PR MERGED 🏆" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.event.action }}" == "closed" ]]; then
+              echo "title=PR CANCELED ❌" >> $GITHUB_OUTPUT
+            else
+              echo "title=NEW/UPDATED PULL REQUEST 🔔" >> $GITHUB_OUTPUT
+            fi
+            echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "title=PUSH TO BRANCH 🚀" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📢 Notify Telegram
+        if: always()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            *${{ steps.event_status.outputs.title }}*
+            
+            🔹 *Project:* `Fypher Main BE`
+            👤 *User:* `${{ github.actor }}`
+            🌿 *Branch:* `${{ steps.event_status.outputs.branch }}`
+            📝 *Commit Message:* `${{ steps.commit_info.outputs.commit_msg }}`
+            ⚙️ *CI Status:* ${{ steps.event_status.outputs.title == 'PR CANCELED ❌' && '❌ ABORTED' || (job.status == 'success' && '✅ PASSED' || '❌ FAILED') }}
+            
+            [🔗 View on GitHub](${{ github.event.pull_request.html_url || format('{0}/{1}/commit/{2}', github.server_url, github.repository, github.sha) }})
