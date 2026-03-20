@@ -56,16 +56,22 @@ export class CreateEmailLogsTable1773291465047 implements MigrationInterface {
           {
             name: 'created_at',
             type: 'timestamp',
-            default: 'CURRENT_TIMESTAMP',
+            isNullable: false,
+            default: 'now()',
           },
           {
             name: 'updated_at',
             type: 'timestamp',
-            default: 'CURRENT_TIMESTAMP',
+            isNullable: false,
+            default: 'now()',
+          },
+          {
+            name: 'deleted_at',
+            type: 'timestamp',
+            isNullable: true,
           },
         ],
       }),
-      true,
     );
   }
 

@@ -1,9 +1,9 @@
 import { AuditLogStatus } from '@constants/audit.constant';
 import { Column, Entity, Index } from 'typeorm';
-import { BaseEntity } from './base-entity';
+import { BaseEntity } from '../../shared/base-entity';
 
 @Entity('audit_logs')
-@Index(['userId', 'timestamp'])
+@Index(['userId'])
 export class AuditLogEntity extends BaseEntity {
   @Column({ name: 'user_id', type: 'int', nullable: false })
   userId: number;

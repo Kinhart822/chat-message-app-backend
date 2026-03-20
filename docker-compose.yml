@@ -2,38 +2,78 @@ version: '3.9'
 
 services:
   postgres:
+    container_name: TekChat-main-${NODE_ENV}-postgres
     image: postgres:15.3-alpine3.18
+    command: -p ${DB_PORT}
     ports:
-      - '5432:5432'
+      - '${DB_PORT}:${DB_PORT}'
     volumes:
       - TekChatPostgresData:/var/lib/postgresql/data
-    env_file:
-      - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE} -p ${DB_PORT}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - TekChatNetwork
+
   redis:
-    image: redis:7.2-alpine
+    image: redis:7-alpine
+    container_name: TekChatRedis
     restart: always
     ports:
-      - '${REDIS_PORT:-6379}:6379'
-    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+      - '${REDIS_PORT}:6379'
     volumes:
       - TekChatRedisData:/data
     networks:
       - TekChatNetwork
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   api:
-    image: tekchat-main:${IMAGE_TAG:-develop}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tekchat-main:${IMAGE_TAG}
+    container_name: TekChat-main-${NODE_ENV}-api
     ports:
-      - '${PORT:-3000}:3000'
+      - '${PORT}:3000'
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - TekChatNetwork
+
+  bull_monitor:
+    container_name: TekChat-main-${NODE_ENV}-bull_monitor
+    image: hocptit/bull_ui:0.0.2
+    ports:
+      - '${BULL_MONITOR_PORT}:3011'
+    environment:
+      REDIS_URI: redis://TekChatRedis:6379
+      USERNAME: ${BULL_MONITOR_USERNAME}
+      PASSWORD: ${BULL_MONITOR_PASSWORD}
+      QUEUES: MAIL_QUEUE
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - TekChatNetwork
 

@@ -6,7 +6,7 @@ export class RegisterResponseDto {
     type: String,
     description: 'User ID',
   })
-  @Expose()
+  @Expose({ name: 'id' })
   userId: number;
 
   @ApiProperty({
@@ -15,13 +15,6 @@ export class RegisterResponseDto {
   })
   @Expose()
   username: string;
-
-  @ApiProperty({
-    type: String,
-    description: 'Full name',
-  })
-  @Expose()
-  fullName: string;
 
   @ApiProperty({
     type: String,

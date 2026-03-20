@@ -1,14 +1,17 @@
-import { getUserRoomByEmail } from '@constants/socket.constant';
+import {
+  getConversationRoomById,
+  getUserRoomByEmail,
+} from '@constants/socket.constant';
 import { Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  MessageBody,
 } from '@nestjs/websockets';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
 import { Server, Socket } from 'socket.io';
@@ -79,12 +82,32 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  async handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
-  }
-
   @SubscribeMessage('ping')
   handlePing(@MessageBody() data: any): string {
     return 'pong';
+  }
+
+  @SubscribeMessage('join_conversation')
+  handleJoinConversation(
+    client: Socket,
+    @MessageBody() conversationId: number,
+  ): void {
+    const room = getConversationRoomById(conversationId);
+    client.join(room);
+    this.logger.log(`Client ${client.id} joined conversation room: ${room}`);
+  }
+
+  @SubscribeMessage('leave_conversation')
+  handleLeaveConversation(
+    client: Socket,
+    @MessageBody() conversationId: number,
+  ): void {
+    const room = getConversationRoomById(conversationId);
+    client.leave(room);
+    this.logger.log(`Client ${client.id} left conversation room: ${room}`);
+  }
+
+  async handleDisconnect(client: Socket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 }

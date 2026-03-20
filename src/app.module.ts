@@ -16,6 +16,9 @@ import { PipeModule } from './pipes/pipe.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { ConversationModule } from './modules/conversation/conversation.module';
+import { MessageModule } from './modules/message/message.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -47,6 +50,9 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
         },
       }),
     }),
+    ConversationModule,
+    MessageModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

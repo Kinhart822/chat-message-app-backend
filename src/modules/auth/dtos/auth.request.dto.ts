@@ -65,6 +65,15 @@ export class VerifyEmailCodeRequestDto extends EmailBodyRequestDto {
     example: '123456',
   })
   code: string;
+
+  @IsNotEmpty()
+  @IsEnum(IMailType)
+  @ApiProperty({
+    enum: IMailType,
+    description: 'Type of mail action',
+    example: IMailType.SIGN_UP,
+  })
+  type: IMailType;
 }
 
 export class ResendCodeRequestDto extends EmailBodyRequestDto {
@@ -78,7 +87,18 @@ export class ResendCodeRequestDto extends EmailBodyRequestDto {
   type: IMailType;
 }
 
-export class ResetPasswordRequestDto extends VerifyEmailCodeRequestDto {
+export class ResetPasswordRequestDto {
+  @IsEmail()
+  @ApiProperty({
+    type: String,
+    description: 'Email address',
+    example: 'user@example.com',
+  })
+  @StringField({
+    toLowerCase: true,
+  })
+  email: string;
+
   @StringField()
   @ApiProperty({
     type: String,
@@ -86,4 +106,13 @@ export class ResetPasswordRequestDto extends VerifyEmailCodeRequestDto {
     example: 'new_password123',
   })
   password: string;
+
+  @StringField()
+  @ApiProperty({
+    type: String,
+    description: 'Verification code',
+    required: true,
+    example: '123456',
+  })
+  code: string;
 }

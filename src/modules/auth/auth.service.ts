@@ -1,4 +1,5 @@
 import { EnvKey } from '@constants/env.constant';
+import { getRegisterDataKey, MAIL_ACTION_TTL } from '@constants/redis.constant';
 import {
   AccessMethod,
   FORGOT_RES,
@@ -8,13 +9,18 @@ import {
   UserStatus,
   VERIFY_ACCOUNT_RES,
 } from '@constants/user.constant';
-import { UserEntity } from '@database/entities/user-entity';
 import { UserRepository } from '@database/repository/user.repository';
+import { UserEntity } from '@entities/user.entity';
+import { RedisService } from '@modules/redis/redis.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
@@ -45,6 +51,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly redisService: RedisService,
   ) {}
 
   // Hash password
@@ -67,7 +74,7 @@ export class AuthService {
   ): Promise<Partial<UserEntity> | null> {
     const user = await this.userRepository.findOneBy({ email });
     if (user && (await this.comparePassword(pass, user.password))) {
-      const { password: _password, ...result } = user;
+      const { password: _, ...result } = user;
       return result;
     }
     return null;
@@ -94,7 +101,7 @@ export class AuthService {
   }
 
   // Register
-  async register(dto: RegisterRequestDto): Promise<RegisterResponseDto> {
+  async register(dto: RegisterRequestDto) {
     const { email, username, password } = dto;
     const account = await this.userRepository.findOneBy({ email });
     if (account) {
@@ -104,29 +111,40 @@ export class AuthService {
       );
     }
 
-    const hashedPassword = await this.hashPassword(password);
-    const newUser = this.userRepository.create({
+    const isOTPExist = await this.mailService.isOTPExist(
       email,
-      username,
-      password: hashedPassword,
-      accessMethod: AccessMethod.EMAIL,
-      status: UserStatus.PENDING, // Default to PENDING until email is verified
-    });
-    await this.userRepository.save(newUser);
+      IMailType.SIGN_UP,
+    );
+    if (isOTPExist) {
+      throw new httpBadRequest(
+        httpErrors.OTP_ALREADY_SENT.message,
+        httpErrors.OTP_ALREADY_SENT.code,
+      );
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+
+    // Store registration data in Redis pending OTP verification
+    const registerDataKey = getRegisterDataKey(email);
+    await this.redisService.set(
+      registerDataKey,
+      { email, username, password: hashedPassword },
+      MAIL_ACTION_TTL,
+    );
 
     // Send OTP for email verification
     await this.mailService.generateAndSendOTP(email, IMailType.SIGN_UP);
 
-    return plainToInstance(RegisterResponseDto, newUser, {
-      excludeExtraneousValues: true,
-    });
+    return {
+      message: 'OTP for registration has been sent to your email.',
+    };
   }
 
   // Forgot Password
   async forgotPassword(dto: EmailBodyRequestDto): Promise<any> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -136,6 +154,17 @@ export class AuthService {
       throw new httpBadRequest(
         httpErrors.BLOCKED_USER.message,
         httpErrors.BLOCKED_USER.code,
+      );
+    }
+
+    const isOTPExist = await this.mailService.isOTPExist(
+      dto.email,
+      IMailType.FORGOT_PASSWORD,
+    );
+    if (isOTPExist) {
+      throw new httpBadRequest(
+        httpErrors.OTP_ALREADY_SENT.message,
+        httpErrors.OTP_ALREADY_SENT.code,
       );
     }
 
@@ -151,28 +180,33 @@ export class AuthService {
   // Resend Code
   async resendCode(dto: ResendCodeRequestDto): Promise<any> {
     const { email, type } = dto;
-    const user = await this.userRepository.findOneBy({ email });
 
-    if (!user) {
-      throw new httpBadRequest(
-        httpErrors.ACCOUNT_NOT_FOUND.message,
-        httpErrors.ACCOUNT_NOT_FOUND.code,
-      );
-    }
+    if (type === IMailType.SIGN_UP) {
+      const registerDataKey = getRegisterDataKey(email);
+      const registerData = await this.redisService.get(registerDataKey);
 
-    if (user.status === UserStatus.BLOCKED) {
-      throw new httpBadRequest(
-        httpErrors.BLOCKED_USER.message,
-        httpErrors.BLOCKED_USER.code,
-      );
-    }
+      if (!registerData) {
+        throw new httpBadRequest(
+          httpErrors.INVALID_REGISTER_OTP.message,
+          httpErrors.INVALID_REGISTER_OTP.code,
+        );
+      }
+    } else {
+      const user = await this.userRepository.findOneBy({ email });
 
-    // Only allow resending SIGN_UP code if user is still PENDING
-    if (type === IMailType.SIGN_UP && user.status !== UserStatus.PENDING) {
-      throw new httpBadRequest(
-        httpErrors.ALREADY_VERIFIED.message,
-        httpErrors.ALREADY_VERIFIED.code,
-      );
+      if (!user) {
+        throw new httpNotFound(
+          httpErrors.ACCOUNT_NOT_FOUND.message,
+          httpErrors.ACCOUNT_NOT_FOUND.code,
+        );
+      }
+
+      if (user.status === UserStatus.BLOCKED) {
+        throw new httpBadRequest(
+          httpErrors.BLOCKED_USER.message,
+          httpErrors.BLOCKED_USER.code,
+        );
+      }
     }
 
     await this.mailService.generateAndSendOTP(email, type);
@@ -189,6 +223,7 @@ export class AuthService {
       email,
       code,
       IMailType.FORGOT_PASSWORD,
+      true, // Persist OTP for action
     );
 
     if (!isVerified) {
@@ -200,7 +235,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOneBy({ email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -208,6 +243,7 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(password);
     await this.userRepository.update(user.id, { password: hashedPassword });
+    await this.mailService.clearOTP(email, IMailType.FORGOT_PASSWORD);
 
     return { message: RESET_PASSWORD_RES };
   }
@@ -216,7 +252,7 @@ export class AuthService {
   async signIn(dto: LoginBodyRequestDto): Promise<LoginResponseDto> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -230,12 +266,7 @@ export class AuthService {
       );
     }
 
-    if (user.status === UserStatus.PENDING) {
-      throw new httpBadRequest(
-        httpErrors.PENDING_VERIFICATION.message,
-        httpErrors.PENDING_VERIFICATION.code,
-      );
-    } else if (user.status === UserStatus.INACTIVE) {
+    if (user.status === UserStatus.INACTIVE) {
       user.status = UserStatus.ACTIVE;
       await this.userRepository.update(user.id, { status: UserStatus.ACTIVE });
     } else if (user.status === UserStatus.BLOCKED) {
@@ -308,7 +339,7 @@ export class AuthService {
   async logout(userId: number): Promise<any> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -334,7 +365,12 @@ export class AuthService {
     code: string,
     type: IMailType,
   ) {
-    const isVerified = await this.mailService.verifyOTP(email, code, type);
+    const isVerified = await this.mailService.verifyOTP(
+      email,
+      code,
+      type,
+      type === IMailType.FORGOT_PASSWORD, // Persist if it's forgot password
+    );
     if (!isVerified) {
       throw new httpBadRequest(
         httpErrors.INVALID_OTP.message,
@@ -342,18 +378,48 @@ export class AuthService {
       );
     }
 
-    const user = await this.userRepository.findOneBy({ email });
-    if (!user) {
-      throw new httpBadRequest(
-        httpErrors.ACCOUNT_NOT_FOUND.message,
-        httpErrors.ACCOUNT_NOT_FOUND.code,
-      );
-    }
-
     switch (type) {
-      case IMailType.SIGN_UP:
-      case IMailType.FORGOT_PASSWORD:
+      case IMailType.SIGN_UP: {
+        const registerDataKey = getRegisterDataKey(email);
+        const registerData = await this.redisService.get<any>(registerDataKey);
+
+        if (!registerData) {
+          throw new httpBadRequest(
+            httpErrors.INVALID_REGISTER_OTP.message,
+            httpErrors.INVALID_REGISTER_OTP.code,
+          );
+        }
+
+        const newUser = this.userRepository.create({
+          email: registerData.email,
+          username: registerData.username,
+          password: registerData.password,
+          accessMethod: AccessMethod.EMAIL,
+          status: UserStatus.ACTIVE,
+        });
+
+        const savedUser = await this.userRepository.save(newUser);
+        await this.redisService.del(registerDataKey);
+
+        return {
+          message: VERIFY_ACCOUNT_RES(type),
+          user: plainToInstance(RegisterResponseDto, savedUser, {
+            excludeExtraneousValues: true,
+          }),
+        };
+      }
+
+      case IMailType.FORGOT_PASSWORD: {
+        const user = await this.userRepository.findOneBy({ email });
+        if (!user) {
+          throw new httpNotFound(
+            httpErrors.ACCOUNT_NOT_FOUND.message,
+            httpErrors.ACCOUNT_NOT_FOUND.code,
+          );
+        }
         return { message: VERIFY_ACCOUNT_RES(type) };
+      }
+
       default:
         return { message: 'OTP verified.' };
     }
@@ -374,7 +440,7 @@ export class AuthService {
     const user = await this.userRepository.findOneBy({ id: decodedData.id });
 
     if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );

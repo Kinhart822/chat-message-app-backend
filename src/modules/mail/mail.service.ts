@@ -2,6 +2,7 @@ import { IMailType, MAIL_TITLE } from '@constants/mail.constant';
 import { MAIL_QUEUE } from '@constants/queue.constant';
 import {
   getRedisMailTypeOtp,
+  getRedisOtpResendCountKey,
   MAIL_ACTION_TTL,
 } from '@constants/redis.constant';
 import { RedisService } from '@modules/redis/redis.service';
@@ -12,6 +13,7 @@ import { Queue } from 'bullmq';
 import dayjs from 'dayjs';
 import { Transactional } from 'typeorm-transactional';
 import { generateOTP } from 'utils/code';
+import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
 
 @Injectable()
 export class MailService {
@@ -54,8 +56,25 @@ export class MailService {
     return code;
   }
 
+  private async checkAndIncrementResendCount(email: string, type: IMailType) {
+    const resendKey = getRedisOtpResendCountKey(email, type);
+    const count = (await this.redisService.get<number>(resendKey)) || 0;
+
+    if (count >= 3) {
+      throw new httpBadRequest(
+        httpErrors.TOO_MANY_RESENDS.message,
+        httpErrors.TOO_MANY_RESENDS.code,
+      );
+    }
+
+    await this.redisService.set(resendKey, count + 1, MAIL_ACTION_TTL);
+  }
+
   @Transactional()
   async generateAndSendOTP(email: string, type: IMailType) {
+    // Check and increment resend count
+    await this.checkAndIncrementResendCount(email, type);
+
     const code = await this.handleGenerateAndSaveOTP(email, type);
 
     // Push to Queue for background sending
@@ -75,17 +94,35 @@ export class MailService {
     email: string,
     code: string,
     type: IMailType,
+    persist: boolean = false,
   ): Promise<boolean> {
     const redisKey = getRedisMailTypeOtp(email, type);
     const storedCode = await this.redisService.get<string>(redisKey);
 
-    if (!storedCode || storedCode !== code) {
+    if (!storedCode || String(storedCode) !== String(code)) {
       return false;
     }
 
-    // Delete code after successful verification
+    if (persist) {
+      return true;
+    }
+
+    // Delete code and resend count after successful verification
     await this.redisService.del(redisKey);
+    await this.redisService.del(getRedisOtpResendCountKey(email, type));
     return true;
+  }
+
+  async isOTPExist(email: string, type: IMailType): Promise<boolean> {
+    const redisKey = getRedisMailTypeOtp(email, type);
+    return await this.redisService.exists(redisKey);
+  }
+
+  async clearOTP(email: string, type: IMailType): Promise<void> {
+    const redisKey = getRedisMailTypeOtp(email, type);
+    const resendKey = getRedisOtpResendCountKey(email, type);
+    await this.redisService.del(redisKey);
+    await this.redisService.del(resendKey);
   }
 
   /**

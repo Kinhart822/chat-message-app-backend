@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DeepPartial, Repository } from 'typeorm';
-import { BaseEntity } from '../entities/base-entity';
+import { BaseEntity } from '../../shared/base-entity';
 
 @Injectable()
 export class BaseRepository<T extends BaseEntity> extends Repository<T> {
