@@ -19,7 +19,7 @@ import {
   ResendCodeRequestDto,
   ResetPasswordRequestDto,
   VerifyEmailCodeRequestDto,
-} from './dtos/auth.request.dto';
+} from './dtos/auth.req.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 @Controller('auth')

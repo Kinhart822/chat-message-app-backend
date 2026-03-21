@@ -70,4 +70,13 @@ export class MessageRepository extends BaseRepository<MessageEntity> {
     const [entities, total] = await query.getManyAndCount();
     return { entities, total };
   }
+
+  async countMessagesBySender(
+    conversationId: number,
+    senderParticipantId: number,
+  ): Promise<number> {
+    return this.count({
+      where: { conversationId, senderParticipantId },
+    });
+  }
 }

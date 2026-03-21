@@ -15,7 +15,9 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 export const PublicRoute = (): CustomDecorator =>
   SetMetadata(PUBLIC_ROUTE_KEY, true);
 
-export function RoleGuard(...roles: RoleUser[]): MethodDecorator {
+export function RoleGuard(
+  ...roles: RoleUser[]
+): ClassDecorator & MethodDecorator {
   return applyDecorators(
     SetMetadata(GUARD_ROUTE_KEY, roles),
     UseGuards(JwtAuthGuard, RolesGuard),

@@ -32,12 +32,12 @@ import {
   RegisterRequestDto,
   ResendCodeRequestDto,
   ResetPasswordRequestDto,
-} from './dtos/auth.request.dto';
+} from './dtos/auth.req.dto';
 import {
   LoginResponseDto,
   RefreshTokenResponseDto,
   RegisterResponseDto,
-} from './dtos/auth.response.dto';
+} from './dtos/auth.res.dto';
 
 import { IMailType } from '@constants/mail.constant';
 import { MailService } from '@modules/mail/mail.service';

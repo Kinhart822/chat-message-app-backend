@@ -2,7 +2,7 @@ import { Order } from '@constants/pagination.constant';
 import {
   ConversationStatus,
   ConversationType,
-  JoinGroupRequestProcessStatus,
+  JoinGroupRequestAction,
 } from '@constants/user.constant';
 import { ApiProperty } from '@nestjs/swagger';
 import {
@@ -212,12 +212,12 @@ export class CreateJoinGroupRequestDto {
 }
 
 export class ProcessJoinGroupRequestDto {
-  @IsEnum(JoinGroupRequestProcessStatus)
+  @IsEnum(JoinGroupRequestAction)
   @ApiProperty({
-    description: 'Join group request status (APPROVED, REJECTED)',
-    example: JoinGroupRequestProcessStatus.APPROVED,
+    description: 'Join group request status (ACCEPT, REJECT)',
+    example: JoinGroupRequestAction.ACCEPT,
     required: true,
-    enum: JoinGroupRequestProcessStatus,
+    enum: JoinGroupRequestAction,
   })
-  status: JoinGroupRequestProcessStatus;
+  action: JoinGroupRequestAction;
 }
