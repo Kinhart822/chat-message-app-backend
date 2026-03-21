@@ -5,6 +5,7 @@ import {
   UserStatus,
 } from '../../constants/user.constant';
 import { BaseEntity } from '../../shared/base-entity';
+import { FriendshipEntity } from './friendship.entity';
 import { ParticipantEntity } from './participant.entity';
 
 @Entity('users')
@@ -51,4 +52,10 @@ export class UserEntity extends BaseEntity {
 
   @OneToMany(() => ParticipantEntity, (participant) => participant.user)
   participants: ParticipantEntity[];
+
+  @OneToMany(() => FriendshipEntity, (friendship) => friendship.user)
+  sentFriendRequests: FriendshipEntity[];
+
+  @OneToMany(() => FriendshipEntity, (friendship) => friendship.friend)
+  receivedFriendRequests: FriendshipEntity[];
 }

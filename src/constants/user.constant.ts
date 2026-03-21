@@ -73,6 +73,13 @@ export enum MessageAttachmentType {
   FILE = 'FILE',
 }
 
+export enum FriendshipStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+  BLOCKED = 'BLOCKED',
+}
+
 export enum MessageAttachmentStatus {
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
@@ -86,6 +93,11 @@ export const RESEND_RES = (type: IMailType) => {
 };
 export const RESET_PASSWORD_RES = 'Password has been reset successfully.';
 export const LOGOUT_RES = 'User has been logged out successfully.';
+
+export const SYSTEM_CONFIG_KEYS = {
+  MAX_NON_FRIEND_MESSAGES: 'MAX_NON_FRIEND_MESSAGES',
+};
+
 export const VERIFY_ACCOUNT_RES = (type: IMailType) => {
   if (type === IMailType.SIGN_UP) {
     return 'Account verified and activated.';

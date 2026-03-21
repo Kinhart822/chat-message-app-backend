@@ -1,4 +1,6 @@
 import { CloudinaryModule } from '@modules/cloudinary/cloudinary.module';
+import { FriendshipModule } from '@modules/friendship/friendship.module';
+import { AdminModule } from '@modules/admin/admin.module';
 import { Module } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
 import { MessageAttachmentRepository } from '@repositories/message-attachment.repository';
@@ -25,6 +27,8 @@ import { MessageProcessor } from './message.processor';
       MessagePinRepository,
     ]),
     CloudinaryModule,
+    FriendshipModule,
+    AdminModule,
     BullModule.registerQueue({
       name: MESSAGE_QUEUE,
     }),

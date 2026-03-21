@@ -1,4 +1,4 @@
-name: Deploy-CI with Telegram Notifications
+name: CI-CD with Telegram Notifications
 run-name: ${{ github.actor }} is triggering workflow on ${{ github.ref_name }} 🚀
 
 on:
@@ -9,21 +9,17 @@ on:
       - 'testing'
       - 'main'
 
-# Auto cancel old workflow if new push
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   main-workflow:
     name: Main Workflow Execution
-    runs-on: [self-hosted, tekchat-main-be]
+    # runs-on: [self-hosted, tekchat-main-be]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: 🛰️ Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -38,27 +34,6 @@ jobs:
           npm run lint
           npm run test
           npm run build
-
-      # --- DEPLOYMENT SECTION ---
-      # - name: 🧰 Prepare environment
-      #   run: |
-      #     echo "${{ vars.FYPHER_MAIN_TESTING_ENV }}" > .env
-      #     echo "GIT_COMMIT=${GITHUB_SHA}" >> .env
-      #     echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
-
-      # - name: 🐳 Build Docker image
-      #   run: |
-      #     docker build -t fypher-main:${IMAGE_TAG} .
-
-      # - name: 🐝 Ensure Swarm is initialized
-      #   run: |
-      #     if [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" != "active" ]; then
-      #       docker swarm init
-      #     fi
-
-      # - name: 🚀 Deploy with Docker Swarm
-      #   run: |
-      #     docker stack deploy -c docker-compose.yml fypher-main --with-registry-auth
 
       - name: 🔍 Get Latest Commit Message
         id: commit_info
@@ -95,12 +70,18 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: markdown
           message: |
-            *${{ steps.event_status.outputs.title }}*
-            
-            🔹 *Project:* `Fypher Main BE`
-            👤 *User:* `${{ github.actor }}`
-            🌿 *Branch:* `${{ steps.event_status.outputs.branch }}`
-            📝 *Commit Message:* `${{ steps.commit_info.outputs.commit_msg }}`
-            ⚙️ *CI Status:* ${{ steps.event_status.outputs.title == 'PR CANCELED ❌' && '❌ ABORTED' || (job.status == 'success' && '✅ PASSED' || '❌ FAILED') }}
-            
-            [🔗 View on GitHub](${{ github.event.pull_request.html_url || format('{0}/{1}/commit/{2}', github.server_url, github.repository, github.sha) }})
+            ✨ **${{ steps.event_status.outputs.title }}**
+
+            ───────────────────────
+            📂 **Project:** `Tekchat Main BE`
+            👤 **Actor:** `${{ github.actor }}`
+            🌿 **Branch:** `${{ steps.event_status.outputs.branch }}`
+
+            📝 **Message**
+            ➜ `${{ steps.commit_info.outputs.commit_msg }}`
+
+            ───────────────────────
+            🚀 **Build Status:** ${{ job.status == 'success' && '✅ **SUCCESS**' || '❌ **FAILED**' }}
+            ───────────────────────
+
+            🔗 [View Details on GitHub](${{ github.event.pull_request.html_url || format('{0}/{1}/commit/{2}', github.server_url, github.repository, github.sha) }})
