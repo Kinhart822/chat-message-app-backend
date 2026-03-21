@@ -3,16 +3,22 @@ run-name: ${{ github.actor }} is triggering workflow on ${{ github.ref_name }} �
 
 on:
   pull_request:
-    types: [opened, synchronize, closed]
+    types: [opened, reopened, ready_for_review, synchronize, closed]
   push:
     branches:
       - 'testing'
       - 'main'
 
+# Auto cancel old workflow if new push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   main-workflow:
     name: Main Workflow Execution
-    runs-on: [self-hosted, fypher-runner-be]
+    runs-on: [self-hosted, tekchat-main-be]
+    timeout-minutes: 10
     
     steps:
       - name: 🛰️ Checkout repository
