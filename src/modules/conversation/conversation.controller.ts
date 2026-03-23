@@ -1,4 +1,4 @@
-import { RoleUser } from '@constants/user.constant';
+import { ConversationType, RoleUser } from '@constants/user.constant';
 import { ParticipantFilterDto } from '@modules/user/dto/participant.req.dto';
 import { ParticipantResDto } from '@modules/user/dto/participant.res.dto';
 import {
@@ -17,6 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
@@ -25,6 +26,7 @@ import {
 import { AuthUser, RoleGuard } from '@shared/decorators/guard.decorator';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
 import { PageDto } from '@shared/dtos/page.dto';
+import { AuditLogInterceptor } from 'interceptors/audit-log.interceptor';
 import { ConversationService } from './conversation.service';
 import {
   AddConversationMemberDto,
@@ -46,7 +48,15 @@ export class ConversationController {
 
   // ==================== GET LIST ====================
   @Get()
-  @ApiOperation({ summary: 'Get list of conversations' })
+  @ApiOperation({
+    summary: 'Get list of conversations',
+    description: 'Returns a paginated list of conversations.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: ConversationResDto,
+    description: 'List of conversations returned successfully',
+  })
   async getList(
     @Query() filterDto: ConversationFilterDto,
   ): Promise<PageDto<ConversationResDto>> {
@@ -54,7 +64,15 @@ export class ConversationController {
   }
 
   @Get('user')
-  @ApiOperation({ summary: 'Get list of conversations by user ID' })
+  @ApiOperation({
+    summary: 'Get conversations for current user',
+    description:
+      'Returns a paginated list of conversations that the current user is a participant in.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User conversations returned successfully',
+  })
   async getListByUserId(
     @AuthUser() user: JwtPayloadDto,
     @Query() filterDto: ConversationFilterDto,
@@ -68,7 +86,15 @@ export class ConversationController {
   }
 
   @Get(':id/participants')
-  @ApiOperation({ summary: 'Get list of participants in a conversation' })
+  @ApiOperation({
+    summary: 'Get list of participants in a conversation',
+    description:
+      'Returns list of participants in a conversation for the specified conversation ID.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'List of participants returned successfully',
+  })
   async getParticipants(
     @Param('id') id: string,
     @Query() filterDto: ParticipantFilterDto,
@@ -96,21 +122,49 @@ export class ConversationController {
   @Post()
   @ApiOperation({
     summary: 'Create a new conversation',
-    description: 'Create a new conversation with the provided details',
+    description:
+      'Creates a new DIRECT or GROUP conversation. For GROUP, an optional avatar can be uploaded.',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
+    type: ConversationResDto,
     description: 'Conversation created successfully',
   })
   @RoleGuard(RoleUser.USER)
-  @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Group name (only for GROUP type)',
+        },
+        participants: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Initial participant IDs',
+        },
+        type: {
+          type: 'string',
+          enum: [ConversationType.DIRECT, ConversationType.GROUP],
+          description: 'Type of conversation',
+          default: ConversationType.DIRECT,
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Avatar image for GROUP conversation',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
   async create(
     @AuthUser() user: JwtPayloadDto,
     @Body() payload: CreateConversationDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    console.log('file', file);
     return this.conversationService.createConversation(user.id, payload, file);
   }
 
@@ -125,8 +179,26 @@ export class ConversationController {
     description: 'Conversation edited successfully',
   })
   @RoleGuard(RoleUser.USER)
-  @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Conversation name' },
+        type: {
+          type: 'string',
+          enum: [ConversationType.DIRECT, ConversationType.GROUP],
+          description: 'Conversation type',
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Group avatar file',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
   async edit(
     @AuthUser() user: JwtPayloadDto,
     @Param('id') id: string,
@@ -236,33 +308,51 @@ export class ConversationController {
   }
 
   // ==================== BLOCK ====================
-  @Post('block/:id')
+  @Post('conversation-management/block/:id')
   @ApiOperation({
-    summary: 'Block a direct conversation',
-    description: 'Block a direct conversation with the provided details',
+    summary: 'Block a conversation',
+    description: 'Block a conversation with the provided details',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Conversation blocked successfully',
   })
-  @RoleGuard(RoleUser.USER)
+  @RoleGuard(RoleUser.ADMIN)
+  @UseInterceptors(AuditLogInterceptor)
   async block(@AuthUser() user: JwtPayloadDto, @Param('id') id: string) {
     return this.conversationService.blockConversation(user.id, +id);
   }
 
   // ==================== UNBLOCK ====================
-  @Post('unblock/:id')
+  @Post('conversation-management/unblock/:id')
   @ApiOperation({
-    summary: 'Unblock a direct conversation',
-    description: 'Unblock a direct conversation with the provided details',
+    summary: 'Unblock a conversation',
+    description: 'Unblock a conversation with the provided details',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Conversation unblocked successfully',
   })
-  @RoleGuard(RoleUser.USER)
+  @RoleGuard(RoleUser.ADMIN)
+  @UseInterceptors(AuditLogInterceptor)
   async unblock(@AuthUser() user: JwtPayloadDto, @Param('id') id: string) {
     return this.conversationService.unblockConversation(user.id, +id);
+  }
+
+  // ==================== DELETE ====================
+  @Delete('conversation-management/delete/:id')
+  @ApiOperation({
+    summary: 'Delete a conversation',
+    description: 'Delete a conversation with the provided details',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Conversation deleted successfully',
+  })
+  @RoleGuard(RoleUser.ADMIN)
+  @UseInterceptors(AuditLogInterceptor)
+  async delete(@AuthUser() user: JwtPayloadDto, @Param('id') id: string) {
+    return this.conversationService.deleteConversation(user.id, +id);
   }
 
   // ==================== ADD MEMBER ====================

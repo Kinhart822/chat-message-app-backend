@@ -10,6 +10,8 @@ import {
   JoinGroupRequestAction,
   ParticipantRole,
   ParticipantStatus,
+  RoleUser,
+  UserStatus,
 } from '@constants/user.constant';
 import { ConversationEntity } from '@entities/conversation.entity';
 import { ParticipantEntity } from '@entities/participant.entity';
@@ -23,7 +25,12 @@ import { ParticipantRepository } from '@repositories/participant.repository';
 import { UserRepository } from '@repositories/user.repository';
 import { PageMetaDto } from '@shared/dtos/page-meta.dto';
 import { PageDto } from '@shared/dtos/page.dto';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpForbidden,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import { Queue } from 'bullmq';
 import { plainToInstance } from 'class-transformer';
 import { In } from 'typeorm';
@@ -68,7 +75,7 @@ export class ConversationService {
 
     const conversation = await this.conversationRepository.findOneBy(where);
     if (!conversation) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.CONVERSATION_NOT_FOUND.message,
         httpErrors.CONVERSATION_NOT_FOUND.code,
       );
@@ -98,9 +105,23 @@ export class ConversationService {
     });
 
     if (!participant || participant.status === ParticipantStatus.LEFT) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.CONVERSATION_NOT_FOUND.message,
         httpErrors.CONVERSATION_NOT_FOUND.code,
+      );
+    }
+
+    // Check participant status
+    if (participant.status === ParticipantStatus.BLOCKED) {
+      throw new httpForbidden(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+    if (participant.status === ParticipantStatus.DELETED) {
+      throw new httpForbidden(
+        httpErrors.ACCOUNT_DELETED.message,
+        httpErrors.ACCOUNT_DELETED.code,
       );
     }
 
@@ -127,6 +148,22 @@ export class ConversationService {
   }
 
   /**
+   * Validate user is the admin
+   */
+  private async validateAdmin(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId, role: RoleUser.ADMIN },
+    });
+    if (!user) {
+      throw new httpNotFound(
+        httpErrors.ACCOUNT_NOT_FOUND.message,
+        httpErrors.ACCOUNT_NOT_FOUND.code,
+      );
+    }
+    return user;
+  }
+
+  /**
    * Map conversation to response DTO
    */
   private mapConversationToResponse(
@@ -148,7 +185,7 @@ export class ConversationService {
       relations: ['participants', 'participants.user'],
     });
     if (!conversation) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.CONVERSATION_NOT_FOUND.message,
         httpErrors.CONVERSATION_NOT_FOUND.code,
       );
@@ -236,6 +273,21 @@ export class ConversationService {
     payload: CreateConversationDto,
     file?: Express.Multer.File,
   ) {
+    // Check if user is blocked or deleted
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user?.status === UserStatus.BLOCKED) {
+      throw new httpForbidden(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+    if (user?.status === UserStatus.DELETED) {
+      throw new httpForbidden(
+        httpErrors.ACCOUNT_DELETED.message,
+        httpErrors.ACCOUNT_DELETED.code,
+      );
+    }
+
     const { name, participants, type } = payload;
 
     // Check if participants are not the same as the owner
@@ -246,9 +298,9 @@ export class ConversationService {
       );
     }
 
-    // Check if the participants exist in the system
+    // Check if the participants exist in the system and are active
     const validParticipants = await this.userRepository.find({
-      where: { id: In(participants) },
+      where: { id: In(participants), status: UserStatus.ACTIVE },
     });
     if (validParticipants.length !== participants.length) {
       throw new httpBadRequest(
@@ -559,9 +611,19 @@ export class ConversationService {
 
   // ==================== BLOCK CONVERSATION ====================
   async blockConversation(userId: number, conversationId: number) {
-    // Validate conversation participant
-    const { conversation, participant } =
-      await this.validateConversationParticipant(conversationId, userId);
+    // Validate admin
+    await this.validateAdmin(userId);
+
+    // Get conversation
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new httpNotFound(
+        httpErrors.CONVERSATION_NOT_FOUND.message,
+        httpErrors.CONVERSATION_NOT_FOUND.code,
+      );
+    }
 
     // Check Type
     if (conversation.type === ConversationType.GROUP) {
@@ -584,7 +646,7 @@ export class ConversationService {
 
     // Emit socket event
     this.socketEmitterService.emitBlockConversation(
-      participant.user.email,
+      conversationId,
       conversation,
     );
     return true;
@@ -592,9 +654,19 @@ export class ConversationService {
 
   // ==================== UNBLOCK CONVERSATION ====================
   async unblockConversation(userId: number, conversationId: number) {
-    // Validate conversation participant
-    const { conversation, participant } =
-      await this.validateConversationParticipant(conversationId, userId);
+    // Validate admin
+    await this.validateAdmin(userId);
+
+    // Get conversation
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new httpNotFound(
+        httpErrors.CONVERSATION_NOT_FOUND.message,
+        httpErrors.CONVERSATION_NOT_FOUND.code,
+      );
+    }
 
     // Unblock conversation
     if (conversation.status !== ConversationStatus.BLOCKED) {
@@ -609,7 +681,44 @@ export class ConversationService {
 
     // Emit socket event
     this.socketEmitterService.emitUnblockConversation(
-      participant.user.email,
+      conversationId,
+      conversation,
+    );
+    return true;
+  }
+
+  // ==================== DELETE CONVERSATION ====================
+  async deleteConversation(userId: number, conversationId: number) {
+    // Validate admin
+    await this.validateAdmin(userId);
+
+    // Get conversation
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new httpNotFound(
+        httpErrors.CONVERSATION_NOT_FOUND.message,
+        httpErrors.CONVERSATION_NOT_FOUND.code,
+      );
+    }
+
+    // Check if conversation is already deleted
+    if (conversation.status === ConversationStatus.DELETED) {
+      throw new httpBadRequest(
+        httpErrors.CONVERSATION_ALREADY_DELETED.message,
+        httpErrors.CONVERSATION_ALREADY_DELETED.code,
+      );
+    }
+
+    // Delete conversation
+    conversation.status = ConversationStatus.DELETED;
+    conversation.deletedAt = new Date();
+    await this.conversationRepository.save(conversation);
+
+    // Emit socket event
+    this.socketEmitterService.emitDeleteConversation(
+      conversationId,
       conversation,
     );
     return true;
@@ -628,14 +737,14 @@ export class ConversationService {
       userId,
     );
 
-    // Validate all user IDs exist in the system
+    // Validate all user IDs exist in the system and are active
     const validUsers = await this.userRepository.find({
-      where: { id: In(payload.userIds) },
+      where: { id: In(payload.userIds), status: UserStatus.ACTIVE },
     });
     if (validUsers.length !== payload.userIds.length) {
       throw new httpBadRequest(
-        httpErrors.INVALID_PARTICIPANTS.message,
-        httpErrors.INVALID_PARTICIPANTS.code,
+        httpErrors.CANNOT_ADD_BLOCKED_OR_DELETED_MEMBER.message,
+        httpErrors.CANNOT_ADD_BLOCKED_OR_DELETED_MEMBER.code,
       );
     }
 
@@ -752,7 +861,7 @@ export class ConversationService {
       where: { id: conversationId, type: ConversationType.GROUP },
     });
     if (!existConversation) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.CONVERSATION_NOT_FOUND.message,
         httpErrors.CONVERSATION_NOT_FOUND.code,
       );
@@ -932,7 +1041,7 @@ export class ConversationService {
       getJoinRequestKey(requestKey),
     );
     if (!joinRequestData) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.JOIN_REQUEST_NOT_FOUND.message,
         httpErrors.JOIN_REQUEST_NOT_FOUND.code,
       );

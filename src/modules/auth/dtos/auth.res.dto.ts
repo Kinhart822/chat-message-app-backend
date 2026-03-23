@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
-export class RegisterResponseDto {
+export class RegisterResDto {
   @ApiProperty({
-    type: String,
+    type: Number,
     description: 'User ID',
   })
   @Expose({ name: 'id' })
@@ -40,7 +40,7 @@ export class RegisterResponseDto {
   accessMethod: string;
 }
 
-export class LoginResponseDto {
+export class LoginResDto {
   @ApiProperty({
     type: String,
     description: 'Access token',
@@ -60,7 +60,7 @@ export class LoginResponseDto {
   userId: number;
 }
 
-export class RefreshTokenResponseDto {
+export class RefreshTokenResDto {
   @ApiProperty({
     type: String,
     description: 'Access token',

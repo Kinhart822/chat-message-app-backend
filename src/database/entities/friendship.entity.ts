@@ -18,6 +18,9 @@ export class FriendshipEntity extends BaseEntity {
   })
   status: FriendshipStatus;
 
+  @Column({ name: 'blocked_by', type: 'int', nullable: true })
+  blockedBy: number;
+
   @ManyToOne(() => UserEntity)
   @JoinColumn({ name: 'user_id' })
   user: UserEntity;

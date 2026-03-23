@@ -2,52 +2,84 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Post,
   Req,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthUser, PublicRoute } from '@shared/decorators/guard.decorator';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
-import { AuditLogInterceptor } from 'interceptors/audit-log.interceptor';
 import { AuthService } from './auth.service';
 import {
-  EmailBodyRequestDto,
-  LoginBodyRequestDto,
-  RefreshTokenRequestDto,
-  RegisterRequestDto,
-  ResendCodeRequestDto,
-  ResetPasswordRequestDto,
-  VerifyEmailCodeRequestDto,
+  EmailBodyReqDto,
+  LoginReqDto,
+  RefreshTokenReqDto,
+  RegisterReqDto,
+  ResendCodeReqDto,
+  ResetPasswordReqDto,
+  VerifyEmailCodeReqDto,
 } from './dtos/auth.req.dto';
+import {
+  LoginResDto,
+  RefreshTokenResDto,
+  RegisterResDto,
+} from './dtos/auth.res.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/register')
   @PublicRoute()
-  async registerUser(@Body() dto: RegisterRequestDto) {
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    type: RegisterResDto,
+    description: 'User registered successfully',
+  })
+  async registerUser(@Body() dto: RegisterReqDto) {
     return this.authService.register(dto);
   }
 
   @Post('login')
   @PublicRoute()
-  @UseInterceptors(AuditLogInterceptor)
-  async login(@Body() dto: LoginBodyRequestDto) {
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: LoginResDto,
+    description: 'User logged in successfully',
+  })
+  async login(@Body() dto: LoginReqDto) {
     return this.authService.signIn(dto);
   }
 
   @Post('logout')
-  @UseInterceptors(AuditLogInterceptor)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout current user' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User logged out successfully',
+  })
   async logout(@AuthUser() user: JwtPayloadDto) {
     return this.authService.logout(user.id);
   }
 
   @Post('verify-otp')
   @PublicRoute()
-  async verifyOtp(@Body() dto: VerifyEmailCodeRequestDto) {
+  @ApiOperation({ summary: 'Verify OTP code' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'OTP verified successfully',
+  })
+  async verifyOtp(@Body() dto: VerifyEmailCodeReqDto) {
     return this.authService.verifyOtpAndExecuteAction(
       dto.email,
       dto.code,
@@ -57,37 +89,64 @@ export class AuthController {
 
   @Post('forgot-password')
   @PublicRoute()
-  async forgotPassword(@Body() dto: EmailBodyRequestDto) {
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Reset code sent successfully',
+  })
+  async forgotPassword(@Body() dto: EmailBodyReqDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Post('reset-password')
   @PublicRoute()
-  async resetPassword(@Body() dto: ResetPasswordRequestDto) {
+  @ApiOperation({ summary: 'Reset password with code' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset successfully',
+  })
+  async resetPassword(@Body() dto: ResetPasswordReqDto) {
     return this.authService.resetPassword(dto);
   }
 
   @Post('resend-code')
   @PublicRoute()
-  async resendCode(@Body() dto: ResendCodeRequestDto) {
+  @ApiOperation({ summary: 'Resend verification code' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Code resent successfully',
+  })
+  async resendCode(@Body() dto: ResendCodeReqDto) {
     return this.authService.resendCode(dto);
   }
 
   @Post('refresh-token')
   @PublicRoute()
-  async refreshToken(@Body() dto: RefreshTokenRequestDto) {
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: RefreshTokenResDto,
+    description: 'Token refreshed successfully',
+  })
+  async refreshToken(@Body() dto: RefreshTokenReqDto) {
     return this.authService.refreshToken(dto);
   }
 
   @UseGuards(GoogleAuthGuard)
   @PublicRoute()
   @Get('google')
+  @ApiOperation({ summary: 'Login with Google' })
   async googleAuth() {}
 
   @UseGuards(GoogleAuthGuard)
   @PublicRoute()
-  @UseInterceptors(AuditLogInterceptor)
   @Get('google/callback')
+  @ApiOperation({ summary: 'Google auth callback' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: LoginResDto,
+    description: 'User logged in via Google successfully',
+  })
   async googleAuthRedirect(@Req() req) {
     return this.authService.googleLogin(req);
   }

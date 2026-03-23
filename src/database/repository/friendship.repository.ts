@@ -2,6 +2,7 @@ import { FriendshipFilterDto } from '@modules/friendship/dto/friendship.req.dto'
 import { CustomRepository } from '@shared/decorators/typeorm.decorator';
 import { FriendshipEntity } from '../entities/friendship.entity';
 import { BaseRepository } from './base.repository';
+import { Order } from '@constants/pagination.constant';
 
 @CustomRepository(FriendshipEntity)
 export class FriendshipRepository extends BaseRepository<FriendshipEntity> {
@@ -35,7 +36,7 @@ export class FriendshipRepository extends BaseRepository<FriendshipEntity> {
       );
     }
 
-    query.orderBy('f.createdAt', direction);
+    query.orderBy('f.createdAt', direction || Order.DESC);
     query.skip(filterDto.skip).take(filterDto.limit);
 
     const [entities, total] = await query.getManyAndCount();

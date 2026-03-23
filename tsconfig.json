@@ -24,6 +24,7 @@
           "@modules/*": ["modules/*"],
           "@repositories/*": ["database/repository/*"],
           "@shared/*": ["shared/*"],
+          "@utils/*": ["utils/*"],
           "@database/*": ["database/*"]
       }
   },

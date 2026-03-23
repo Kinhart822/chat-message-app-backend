@@ -17,7 +17,8 @@ export class CreateSystemConfigsTable1773446400000 implements MigrationInterface
     // Seed initial data for MAX_NON_FRIEND_MESSAGES
     await queryRunner.query(`
       INSERT INTO "system_configs" ("key", "value", "description") 
-      VALUES ('MAX_NON_FRIEND_MESSAGES', '5', 'Maximum messages a user can send to a non-friend in a DIRECT conversation.')
+      VALUES ('MAX_NON_FRIEND_MESSAGES', '5', 'Maximum messages a user can send to a non-friend in a DIRECT conversation.'),
+      ('MAX_FRIEND_REQUESTS_PER_DAY', '20', 'Maximum number of friend requests a user can send per day.')
     `);
   }
 

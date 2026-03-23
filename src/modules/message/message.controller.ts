@@ -13,6 +13,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
@@ -45,7 +46,16 @@ export class MessageController {
 
   // ==================== GET LIST ====================
   @Get('conversation/:id')
-  @ApiOperation({ summary: 'Get list of message by conversation ID' })
+  @ApiOperation({
+    summary: 'Get conversation messages',
+    description:
+      'Returns a paginated list of messages for a specific conversation.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: MessageResDto,
+    description: 'List of messages returned successfully',
+  })
   async getListByConversationId(
     @AuthUser() user: JwtPayloadDto,
     @Query() filterDto: MessageFilterDto,
@@ -70,7 +80,16 @@ export class MessageController {
   }
 
   @Get('conversation/:id/attachments')
-  @ApiOperation({ summary: 'Get list of attachments by conversation ID' })
+  @ApiOperation({
+    summary: 'Get conversation attachments',
+    description:
+      'Returns a paginated list of attachments for a specific conversation.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: MessageAttachmentResDto,
+    description: 'List of attachments returned successfully',
+  })
   async getConversationAttachments(
     @Param('id') id: string,
     @Query() filterDto: MessageAttachmentFilterDto,
@@ -79,7 +98,16 @@ export class MessageController {
   }
 
   @Get('conversation/:id/pins')
-  @ApiOperation({ summary: 'Get list of pinned messages by conversation ID' })
+  @ApiOperation({
+    summary: 'Get pinned messages',
+    description:
+      'Returns a list of pinned messages for a specific conversation.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: MessagePinResDto,
+    description: 'List of pinned messages returned successfully',
+  })
   async getPinnedMessages(
     @Param('id') id: string,
     @Query() filterDto: MessageFilterDto,
@@ -89,9 +117,38 @@ export class MessageController {
 
   // ==================== SEND ====================
   @Post('send')
+  @ApiOperation({
+    summary: 'Send a message',
+    description: 'Sends a new message with optional file attachments.',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    type: MessageResDto,
+    description: 'Message sent successfully',
+  })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        conversationId: {
+          type: 'number',
+          description: 'Target conversation ID',
+        },
+        content: { type: 'string', description: 'Message text content' },
+        replyToMessageId: {
+          type: 'number',
+          description: 'ID of message being replied to',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Optional file attachments',
+        },
+      },
+    },
+  })
   @UseInterceptors(FilesInterceptor('files'))
-  @ApiOperation({ summary: 'Send a new message' })
   async sendMessage(
     @AuthUser() user: JwtPayloadDto,
     @Body() dto: SendMessageDto,
@@ -102,9 +159,24 @@ export class MessageController {
 
   // ==================== EDIT ====================
   @Put('edit')
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FilesInterceptor('files'))
   @ApiOperation({ summary: 'Edit an existing message' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        conversationId: { type: 'number', description: 'Conversation ID' },
+        content: { type: 'string', description: 'Message content' },
+        messageId: { type: 'number', description: 'Message ID' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'New attachment files',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files'))
   async editMessage(
     @AuthUser() user: JwtPayloadDto,
     @Body() dto: EditMessageDto,

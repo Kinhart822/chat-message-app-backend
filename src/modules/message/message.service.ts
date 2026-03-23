@@ -1,18 +1,20 @@
 import { FILE_UPLOAD_JOB, FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import {
+  ConversationStatus,
   ConversationType,
   MessageAttachmentStatus,
   MessageAttachmentType,
   MessageStatus,
   MessageType,
+  ParticipantStatus,
   RoleUser,
   SYSTEM_CONFIG_KEYS,
 } from '@constants/user.constant';
 import { ConversationEntity } from '@entities/conversation.entity';
 import { MessageAttachmentEntity } from '@entities/message-attachment.entity';
 import { MessageEntity } from '@entities/message.entity';
-import { SystemConfigService } from '@modules/admin/system-config.service';
 import { FriendshipService } from '@modules/friendship/friendship.service';
+import { SystemConfigService } from '@modules/system-config/system-config.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
@@ -23,7 +25,12 @@ import { ParticipantRepository } from '@repositories/participant.repository';
 import { JwtPayloadDto } from '@shared/dtos/jwt-payload.dto';
 import { PageMetaDto } from '@shared/dtos/page-meta.dto';
 import { PageDto } from '@shared/dtos/page.dto';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpForbidden,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import { Queue } from 'bullmq';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
@@ -77,9 +84,20 @@ export class MessageService {
     }
 
     if (!conversation) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.CONVERSATION_NOT_FOUND.message,
         httpErrors.CONVERSATION_NOT_FOUND.code,
+      );
+    }
+
+    if (
+      [ConversationStatus.BLOCKED, ConversationStatus.DELETED].includes(
+        conversation.status,
+      )
+    ) {
+      throw new httpBadRequest(
+        httpErrors.INVALID_CONVERSATION.message,
+        httpErrors.INVALID_CONVERSATION.code,
       );
     }
     return conversation;
@@ -93,7 +111,7 @@ export class MessageService {
       where: { id: messageId },
     });
     if (!message) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.MESSAGE_NOT_FOUND.message,
         httpErrors.MESSAGE_NOT_FOUND.code,
       );
@@ -119,14 +137,44 @@ export class MessageService {
         httpErrors.NOT_PARTICIPANT_OF_CONVERSATION.code,
       );
     }
+
+    if (participant.status === ParticipantStatus.BLOCKED) {
+      throw new httpForbidden(
+        httpErrors.BLOCKED_USER.message,
+        httpErrors.BLOCKED_USER.code,
+      );
+    }
+
+    if (participant.status === ParticipantStatus.DELETED) {
+      throw new httpForbidden(
+        httpErrors.ACCOUNT_DELETED.message,
+        httpErrors.ACCOUNT_DELETED.code,
+      );
+    }
+
+    // Only ACTIVE or ARCHIVED participants can perform actions
+    if (
+      ![ParticipantStatus.ACTIVE, ParticipantStatus.ARCHIVED].includes(
+        participant.status,
+      )
+    ) {
+      throw new httpForbidden(
+        httpErrors.FORBIDDEN.message,
+        httpErrors.FORBIDDEN.code,
+      );
+    }
+
     return participant;
   }
 
   /**
    * Validate participant is sender of the message
    */
-  private validateSenderParticipant(message: MessageEntity, userId: number) {
-    if (message.senderParticipantId !== userId) {
+  private validateSenderParticipant(
+    message: MessageEntity,
+    participantId: number,
+  ) {
+    if (message.senderParticipantId !== participantId) {
       throw new httpBadRequest(
         httpErrors.NOT_SENDER_OF_MESSAGE.message,
         httpErrors.NOT_SENDER_OF_MESSAGE.code,
@@ -206,7 +254,7 @@ export class MessageService {
       },
     });
     if (!message) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.MESSAGE_NOT_FOUND.message,
         httpErrors.MESSAGE_NOT_FOUND.code,
       );
@@ -344,8 +392,21 @@ export class MessageService {
       const otherParticipant = participants.find((p) => p.userId !== userId);
 
       if (otherParticipant) {
-        const isFriend = await this.friendshipService.checkFriendship(
+        // Check if either user has blocked the other
+        const isBlocked = await this.friendshipService.checkBlocked(
           userId,
+          otherParticipant.userId,
+        );
+        if (isBlocked) {
+          throw new httpForbidden(
+            httpErrors.BLOCKED_USER.message,
+            httpErrors.BLOCKED_USER.code,
+          );
+        }
+
+        // Check if they are friends
+        const isFriend = await this.friendshipService.checkFriendship(
+          senderParticipant.userId,
           otherParticipant.userId,
         );
 
@@ -445,14 +506,14 @@ export class MessageService {
       lastMessageSeq: message.sequence,
       lastMessagePreview: preview,
       lastMessageType: message.type,
-      lastMessageSenderId: userId,
+      lastMessageSenderId: senderParticipant.id,
       lastMessageAt: message.createdAt,
     });
 
     // Increment unread count for other participants
     await this.participantRepository.incrementUnreadCount(
       dto.conversationId,
-      userId,
+      senderParticipant.userId,
     );
 
     // Emit message to conversation room
@@ -467,6 +528,12 @@ export class MessageService {
     dto: EditMessageDto,
     files?: Express.Multer.File[],
   ) {
+    // Validate user is active
+    const participant = await this.validateParticipant(
+      dto.conversationId,
+      userId,
+    );
+
     // Validate message with attachments relation
     const message = await this.messageRepository.findOne({
       where: { id: dto.messageId },
@@ -474,14 +541,14 @@ export class MessageService {
     });
 
     if (!message) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.MESSAGE_NOT_FOUND.message,
         httpErrors.MESSAGE_NOT_FOUND.code,
       );
     }
 
     // Validate participant is sender of this message
-    await this.validateSenderParticipant(message, userId);
+    await this.validateSenderParticipant(message, participant.id);
 
     // Validate message is not pinned
     await this.validateMessageIsNotPinned(message);
@@ -615,7 +682,7 @@ export class MessageService {
     // Increment unread count for other participants on edit as requested
     await this.participantRepository.incrementUnreadCount(
       message.conversationId,
-      userId,
+      participant.userId,
     );
 
     // Emit message to conversation room
@@ -643,7 +710,7 @@ export class MessageService {
     await this.participantRepository.update(
       {
         conversationId: dto.conversationId,
-        userId: userId,
+        userId: participant.userId,
       },
       {
         lastReadSeq: conversation.lastMessageSeq,
@@ -654,7 +721,7 @@ export class MessageService {
     // Emit message to conversation room
     this.socketEmitterService.emitMarkMessageAsRead(participant.user.email, {
       conversationId: dto.conversationId,
-      userId,
+      participantId: participant.id,
     });
     return true;
   }
@@ -708,7 +775,7 @@ export class MessageService {
       },
     });
     if (!messagePin) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.MESSAGE_PIN_NOT_FOUND.message,
         httpErrors.MESSAGE_PIN_NOT_FOUND.code,
       );

@@ -2,6 +2,7 @@ import { EnvKey } from '@constants/env.constant';
 import { getRegisterDataKey, MAIL_ACTION_TTL } from '@constants/redis.constant';
 import {
   AccessMethod,
+  AccountHistoryType,
   FORGOT_PASSWORD_RES,
   LOGOUT_RES,
   REGISTER_RES,
@@ -10,6 +11,7 @@ import {
   UserStatus,
   VERIFY_ACCOUNT_RES,
 } from '@constants/user.constant';
+import { AccountHistoryRepository } from '@database/repository/account-history.repository';
 import { UserRepository } from '@database/repository/user.repository';
 import { UserEntity } from '@entities/user.entity';
 import { RedisService } from '@modules/redis/redis.service';
@@ -27,17 +29,17 @@ import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
 import { parseDuration } from 'utils/util';
 import {
-  EmailBodyRequestDto,
-  LoginBodyRequestDto,
-  RefreshTokenRequestDto,
-  RegisterRequestDto,
-  ResendCodeRequestDto,
-  ResetPasswordRequestDto,
+  EmailBodyReqDto,
+  LoginReqDto,
+  RefreshTokenReqDto,
+  RegisterReqDto,
+  ResendCodeReqDto,
+  ResetPasswordReqDto,
 } from './dtos/auth.req.dto';
 import {
-  LoginResponseDto,
-  RefreshTokenResponseDto,
-  RegisterResponseDto,
+  LoginResDto,
+  RefreshTokenResDto,
+  RegisterResDto,
 } from './dtos/auth.res.dto';
 
 import { IMailType } from '@constants/mail.constant';
@@ -49,6 +51,7 @@ export class AuthService {
 
   constructor(
     private readonly userRepository: UserRepository,
+    private readonly accountHistoryRepository: AccountHistoryRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
@@ -102,7 +105,7 @@ export class AuthService {
   }
 
   // Register
-  async register(dto: RegisterRequestDto) {
+  async register(dto: RegisterReqDto) {
     const { email, username, password } = dto;
 
     // Check account existed
@@ -155,7 +158,7 @@ export class AuthService {
   }
 
   // Forgot Password
-  async forgotPassword(dto: EmailBodyRequestDto): Promise<any> {
+  async forgotPassword(dto: EmailBodyReqDto): Promise<any> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
       throw new httpNotFound(
@@ -192,7 +195,7 @@ export class AuthService {
   }
 
   // Resend Code
-  async resendCode(dto: ResendCodeRequestDto): Promise<any> {
+  async resendCode(dto: ResendCodeReqDto): Promise<any> {
     const { email, type } = dto;
 
     if (type === IMailType.SIGN_UP) {
@@ -230,7 +233,7 @@ export class AuthService {
 
   // Reset Password
   @Transactional()
-  async resetPassword(dto: ResetPasswordRequestDto): Promise<any> {
+  async resetPassword(dto: ResetPasswordReqDto): Promise<any> {
     const { email, code, password } = dto;
 
     const isVerified = await this.mailService.verifyOTP(
@@ -263,7 +266,7 @@ export class AuthService {
   }
 
   // Login with Email/Password
-  async signIn(dto: LoginBodyRequestDto): Promise<LoginResponseDto> {
+  async signIn(dto: LoginReqDto): Promise<LoginResDto> {
     const user = await this.userRepository.findOneBy({ email: dto.email });
     if (!user) {
       throw new httpNotFound(
@@ -290,12 +293,20 @@ export class AuthService {
       );
     }
 
+    await this.accountHistoryRepository.save(
+      this.accountHistoryRepository.create({
+        userId: user.id,
+        type: AccountHistoryType.SIGN_IN,
+        status: user.status,
+      }),
+    );
+
     return this.login(user);
   }
 
   // Login/Register with Google
   @Transactional()
-  async googleLogin(req: any): Promise<LoginResponseDto | null> {
+  async googleLogin(req: any): Promise<LoginResDto | null> {
     if (!req.user) return null;
     const { email, googleId } = req.user;
     this.logger.log(`Google Login Attempt: ${email} (${googleId})`);
@@ -329,11 +340,19 @@ export class AuthService {
       }
     }
 
+    await this.accountHistoryRepository.save(
+      this.accountHistoryRepository.create({
+        userId: user.id,
+        type: AccountHistoryType.SIGN_IN,
+        status: user.status,
+      }),
+    );
+
     return this.login(user);
   }
 
   // Core login logic for all methods
-  async login(user: UserEntity): Promise<LoginResponseDto> {
+  async login(user: UserEntity): Promise<LoginResDto> {
     const payload: JwtPayloadDto = {
       email: user.email,
       id: user.id,
@@ -342,7 +361,7 @@ export class AuthService {
     };
     const { accessToken, refreshToken } = await this.generateToken(payload);
 
-    return plainToInstance(LoginResponseDto, {
+    return plainToInstance(LoginResDto, {
       accessToken,
       refreshToken,
       userId: user.id,
@@ -415,9 +434,17 @@ export class AuthService {
         const savedUser = await this.userRepository.save(newUser);
         await this.redisService.del(registerDataKey);
 
+        await this.accountHistoryRepository.save(
+          this.accountHistoryRepository.create({
+            userId: savedUser.id,
+            type: AccountHistoryType.REGISTER,
+            status: UserStatus.ACTIVE,
+          }),
+        );
+
         return {
           message: VERIFY_ACCOUNT_RES(type),
-          user: plainToInstance(RegisterResponseDto, savedUser, {
+          user: plainToInstance(RegisterResDto, savedUser, {
             excludeExtraneousValues: true,
           }),
         };
@@ -440,9 +467,7 @@ export class AuthService {
   }
 
   // Refresh token
-  async refreshToken(
-    data: RefreshTokenRequestDto,
-  ): Promise<RefreshTokenResponseDto> {
+  async refreshToken(data: RefreshTokenReqDto): Promise<RefreshTokenResDto> {
     const { refreshToken } = data;
     const decodedData: JwtPayloadDto = await this.jwtService.verifyAsync(
       refreshToken,

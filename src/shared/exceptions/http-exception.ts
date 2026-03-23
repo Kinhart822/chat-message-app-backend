@@ -100,6 +100,22 @@ export const httpErrors = {
     message: 'User has been blocked.',
     code: 'BLOCKED_USER',
   },
+  ACCOUNT_DELETED: {
+    message: 'Account has been deleted.',
+    code: 'ACCOUNT_DELETED',
+  },
+  USER_ALREADY_BLOCKED: {
+    message: 'User is already blocked.',
+    code: 'USER_ALREADY_BLOCKED',
+  },
+  USER_NOT_BLOCKED: {
+    message: 'User is not blocked.',
+    code: 'USER_NOT_BLOCKED',
+  },
+  USER_ALREADY_DELETED: {
+    message: 'User is already deleted.',
+    code: 'USER_ALREADY_DELETED',
+  },
   REFRESH_TOKEN_EXPIRED: {
     message: 'Refresh tokens is expired.',
     code: 'REFRESH_TOKEN_EXPIRED',
@@ -163,6 +179,10 @@ export const httpErrors = {
   CANNOT_CREATE_SELF_CONVERSATION: {
     message: 'Cannot create conversation with yourself.',
     code: 'CANNOT_CREATE_SELF_CONVERSATION',
+  },
+  INVALID_CONVERSATION: {
+    message: 'Invalid conversation.',
+    code: 'INVALID_CONVERSATION',
   },
   INVALID_PARTICIPANTS: {
     message: 'Invalid participants.',
@@ -243,6 +263,14 @@ export const httpErrors = {
   CONVERSATION_NOT_BLOCKED: {
     message: 'Conversation is not blocked.',
     code: 'CONVERSATION_NOT_BLOCKED',
+  },
+  CONVERSATION_ALREADY_DELETED: {
+    message: 'Conversation is already deleted.',
+    code: 'CONVERSATION_ALREADY_DELETED',
+  },
+  AUDIT_LOG_NOT_FOUND: {
+    message: 'Audit log not found.',
+    code: 'AUDIT_LOG_NOT_FOUND',
   },
   MEMBER_ALREADY_KICKED: {
     message: 'Member is already kicked.',
@@ -338,6 +366,22 @@ export const httpErrors = {
     message: 'Cannot self process your own friend request.',
     code: 'CANNOT_SELF_PROCESS_FRIEND_REQUEST',
   },
+  CANNOT_BLOCK_SELF: {
+    message: 'Cannot block yourself.',
+    code: 'CANNOT_BLOCK_SELF',
+  },
+  CANNOT_UNBLOCK_USER: {
+    message: "You cannot unblock this user because you didn't block them.",
+    code: 'CANNOT_UNBLOCK_USER',
+  },
+  FRIENDSHIP_NOT_BLOCKED: {
+    message: 'Friendship is not blocked.',
+    code: 'FRIENDSHIP_NOT_BLOCKED',
+  },
+  FRIENDSHIP_ALREADY_BLOCKED: {
+    message: 'Friendship already blocked.',
+    code: 'FRIENDSHIP_ALREADY_BLOCKED',
+  },
 
   // system config error
   SYSTEM_CONFIG_NOT_FOUND: {
@@ -351,5 +395,15 @@ export const httpErrors = {
   FRIENDSHIP_LIMIT_EXCEEDED: {
     message: 'You have reached the message limit for non-friends.',
     code: 'FRIENDSHIP_LIMIT_EXCEEDED',
+  },
+  MAX_FRIEND_REQUESTS_PER_DAY_EXCEEDED: {
+    message: 'You have reached the maximum number of friend requests per day.',
+    code: 'MAX_FRIEND_REQUESTS_PER_DAY_EXCEEDED',
+  },
+
+  // account history error
+  ACCOUNT_HISTORY_NOT_FOUND: {
+    message: 'Account history not found.',
+    code: 'ACCOUNT_HISTORY_NOT_FOUND',
   },
 };

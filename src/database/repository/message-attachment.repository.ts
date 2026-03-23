@@ -3,6 +3,7 @@ import { MessageAttachmentFilterDto } from '@modules/message/dto/message.req.dto
 import { CustomRepository } from '@shared/decorators/typeorm.decorator';
 import { normalizeDate } from 'utils/date';
 import { BaseRepository } from './base.repository';
+import { Order } from '@constants/pagination.constant';
 
 @CustomRepository(MessageAttachmentEntity)
 export class MessageAttachmentRepository extends BaseRepository<MessageAttachmentEntity> {
@@ -42,7 +43,7 @@ export class MessageAttachmentRepository extends BaseRepository<MessageAttachmen
       });
     }
 
-    query.orderBy('ma.createdAt', filterDto.direction);
+    query.orderBy('ma.createdAt', filterDto.direction || Order.DESC);
     query.skip(filterDto.skip).take(filterDto.limit);
 
     const [entities, total] = await query.getManyAndCount();

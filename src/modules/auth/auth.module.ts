@@ -1,3 +1,4 @@
+import { AccountHistoryRepository } from '@database/repository/account-history.repository';
 import { UserRepository } from '@database/repository/user.repository';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -15,7 +16,10 @@ import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmExModule.forCustomRepository([UserRepository]),
+    TypeOrmExModule.forCustomRepository([
+      UserRepository,
+      AccountHistoryRepository,
+    ]),
     MailModule,
     PassportModule,
     JwtModule.registerAsync({
