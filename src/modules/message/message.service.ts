@@ -6,10 +6,13 @@ import {
   MessageStatus,
   MessageType,
   RoleUser,
+  SYSTEM_CONFIG_KEYS,
 } from '@constants/user.constant';
 import { ConversationEntity } from '@entities/conversation.entity';
 import { MessageAttachmentEntity } from '@entities/message-attachment.entity';
 import { MessageEntity } from '@entities/message.entity';
+import { SystemConfigService } from '@modules/admin/system-config.service';
+import { FriendshipService } from '@modules/friendship/friendship.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
@@ -49,6 +52,8 @@ export class MessageService {
     private readonly socketEmitterService: SocketEmitterService,
     private readonly messageAttachmentRepository: MessageAttachmentRepository,
     private readonly messagePinRepository: MessagePinRepository,
+    private readonly friendshipService: FriendshipService,
+    private readonly systemConfigService: SystemConfigService,
     @InjectQueue(MESSAGE_QUEUE) private readonly messageQueue: Queue,
   ) {}
 
@@ -124,7 +129,7 @@ export class MessageService {
     if (message.senderParticipantId !== userId) {
       throw new httpBadRequest(
         httpErrors.NOT_SENDER_OF_MESSAGE.message,
-        httpErrors.MESSAGE_IS_DELETED.code,
+        httpErrors.NOT_SENDER_OF_MESSAGE.code,
       );
     }
   }
@@ -327,6 +332,43 @@ export class MessageService {
         httpErrors.MESSAGE_CONTENT_TOO_LONG.message,
         httpErrors.MESSAGE_CONTENT_TOO_LONG.code,
       );
+    }
+
+    // Friend Check Logic for DIRECT Conversations
+    if (conversation.type === ConversationType.DIRECT) {
+      // Find the other participant in this direct conversation
+      const participants = await this.participantRepository.find({
+        where: { conversationId: dto.conversationId },
+      });
+
+      const otherParticipant = participants.find((p) => p.userId !== userId);
+
+      if (otherParticipant) {
+        const isFriend = await this.friendshipService.checkFriendship(
+          userId,
+          otherParticipant.userId,
+        );
+
+        if (!isFriend) {
+          // If not friends, check the message limit
+          const maxMessagesStr = await this.systemConfigService.getConfig(
+            SYSTEM_CONFIG_KEYS.MAX_NON_FRIEND_MESSAGES,
+          );
+          const maxMessages = parseInt(maxMessagesStr.value || '5', 10);
+
+          const sentCount = await this.messageRepository.countMessagesBySender(
+            dto.conversationId,
+            senderParticipant.id,
+          );
+
+          if (sentCount >= maxMessages) {
+            throw new httpBadRequest(
+              httpErrors.FRIENDSHIP_LIMIT_EXCEEDED.message,
+              httpErrors.FRIENDSHIP_LIMIT_EXCEEDED.code,
+            );
+          }
+        }
+      }
     }
 
     // Determine message type
@@ -610,10 +652,10 @@ export class MessageService {
     );
 
     // Emit message to conversation room
-    this.socketEmitterService.emitMarkMessageAsRead(
-      participant.user.email,
+    this.socketEmitterService.emitMarkMessageAsRead(participant.user.email, {
+      conversationId: dto.conversationId,
       userId,
-    );
+    });
     return true;
   }
 

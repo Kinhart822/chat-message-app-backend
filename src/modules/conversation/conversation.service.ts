@@ -7,7 +7,7 @@ import {
 import {
   ConversationStatus,
   ConversationType,
-  JoinGroupRequestProcessStatus,
+  JoinGroupRequestAction,
   ParticipantRole,
   ParticipantStatus,
 } from '@constants/user.constant';
@@ -939,7 +939,7 @@ export class ConversationService {
     );
 
     // 3. Process based on status
-    if (payload.status === JoinGroupRequestProcessStatus.APPROVED) {
+    if (payload.action === JoinGroupRequestAction.ACCEPT) {
       // Check if user has an existing participant record
       const existingParticipant = await this.participantRepository.findOne({
         where: {

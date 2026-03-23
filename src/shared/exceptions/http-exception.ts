@@ -300,4 +300,52 @@ export const httpErrors = {
     message: 'You cannot unpin a message pinned by another user.',
     code: 'CANNOT_UNPIN_OTHERS_MESSAGE',
   },
+
+  // friendship error
+  FRIENDSHIP_NOT_FOUND: {
+    message: 'Friendship request not found.',
+    code: 'FRIENDSHIP_NOT_FOUND',
+  },
+  FRIENDSHIP_ALREADY_EXISTED: {
+    message: 'Friendship already existed.',
+    code: 'FRIENDSHIP_ALREADY_EXISTED',
+  },
+  CANNOT_SEND_FRIEND_REQUEST_TO_SELF: {
+    message: 'Cannot send friend request to self.',
+    code: 'CANNOT_SEND_FRIEND_REQUEST_TO_SELF',
+  },
+  INVALID_FRIEND_REQUEST_TARGET: {
+    message: 'Cannot send friend request to this user.',
+    code: 'INVALID_FRIEND_REQUEST_TARGET',
+  },
+  FRIEND_REQUEST_NOT_FOUND: {
+    message: 'Friend request not found.',
+    code: 'FRIEND_REQUEST_NOT_FOUND',
+  },
+  FRIEND_REQUEST_ALREADY_PENDING: {
+    message: 'Friend request is already pending.',
+    code: 'FRIEND_REQUEST_ALREADY_PENDING',
+  },
+  FRIEND_REQUEST_NOT_PENDING: {
+    message: 'Friend request is not pending.',
+    code: 'FRIEND_REQUEST_NOT_PENDING',
+  },
+  CANNOT_SELF_PROCESS_FRIEND_REQUEST: {
+    message: 'Cannot self process your own friend request.',
+    code: 'CANNOT_SELF_PROCESS_FRIEND_REQUEST',
+  },
+
+  // system config error
+  SYSTEM_CONFIG_NOT_FOUND: {
+    message: 'System config not found.',
+    code: 'SYSTEM_CONFIG_NOT_FOUND',
+  },
+  SYSTEM_CONFIG_ALREADY_EXISTED: {
+    message: 'System config already existed.',
+    code: 'SYSTEM_CONFIG_ALREADY_EXISTED',
+  },
+  FRIENDSHIP_LIMIT_EXCEEDED: {
+    message: 'You have reached the message limit for non-friends.',
+    code: 'FRIENDSHIP_LIMIT_EXCEEDED',
+  },
 };

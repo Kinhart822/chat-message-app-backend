@@ -19,6 +19,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { MessageModule } from './modules/message/message.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { FriendshipModule } from './modules/friendship/friendship.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
     ConversationModule,
     MessageModule,
     CloudinaryModule,
+    FriendshipModule,
   ],
   controllers: [AppController],
   providers: [AppService],
