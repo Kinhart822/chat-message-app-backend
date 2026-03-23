@@ -2,8 +2,9 @@ import { EnvKey } from '@constants/env.constant';
 import { getRegisterDataKey, MAIL_ACTION_TTL } from '@constants/redis.constant';
 import {
   AccessMethod,
-  FORGOT_RES,
+  FORGOT_PASSWORD_RES,
   LOGOUT_RES,
+  REGISTER_RES,
   RESEND_RES,
   RESET_PASSWORD_RES,
   UserStatus,
@@ -103,6 +104,8 @@ export class AuthService {
   // Register
   async register(dto: RegisterRequestDto) {
     const { email, username, password } = dto;
+
+    // Check account existed
     const account = await this.userRepository.findOneBy({ email });
     if (account) {
       throw new httpBadRequest(
@@ -111,6 +114,16 @@ export class AuthService {
       );
     }
 
+    // Check username existed
+    const usernameExisted = await this.userRepository.findOneBy({ username });
+    if (usernameExisted) {
+      throw new httpBadRequest(
+        httpErrors.USERNAME_EXISTED.message,
+        httpErrors.USERNAME_EXISTED.code,
+      );
+    }
+
+    // Check OTP existed
     const isOTPExist = await this.mailService.isOTPExist(
       email,
       IMailType.SIGN_UP,
@@ -122,6 +135,7 @@ export class AuthService {
       );
     }
 
+    // Hash password
     const hashedPassword = await this.hashPassword(password);
 
     // Store registration data in Redis pending OTP verification
@@ -136,7 +150,7 @@ export class AuthService {
     await this.mailService.generateAndSendOTP(email, IMailType.SIGN_UP);
 
     return {
-      message: 'OTP for registration has been sent to your email.',
+      message: REGISTER_RES,
     };
   }
 
@@ -174,7 +188,7 @@ export class AuthService {
       IMailType.FORGOT_PASSWORD,
     );
 
-    return { message: FORGOT_RES };
+    return { message: FORGOT_PASSWORD_RES };
   }
 
   // Resend Code
@@ -421,7 +435,7 @@ export class AuthService {
       }
 
       default:
-        return { message: 'OTP verified.' };
+        return { message: VERIFY_ACCOUNT_RES(type) };
     }
   }
 

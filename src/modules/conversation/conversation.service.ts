@@ -1,4 +1,4 @@
-import { MESSAGE_JOB, MESSAGE_QUEUE } from '@constants/queue.constant';
+import { FILE_UPLOAD_JOB, FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import {
   getJoinRequestKey,
   getUserConversationJoinRequestKey,
@@ -52,7 +52,7 @@ export class ConversationService {
     private readonly participantRepository: ParticipantRepository,
     private readonly redisService: RedisService,
     private readonly socketEmitterService: SocketEmitterService,
-    @InjectQueue(MESSAGE_QUEUE) private readonly messageQueue: Queue,
+    @InjectQueue(FILE_UPLOAD_QUEUE) private readonly fileUploadQueue: Queue,
   ) {}
 
   // ==================== Helper Methods ====================
@@ -303,15 +303,18 @@ export class ConversationService {
     await this.conversationRepository.save(conversation);
 
     if (file) {
-      await this.messageQueue.add(MESSAGE_JOB.UPLOAD_CONVERSATION_AVATAR, {
-        conversationId: conversation.id,
-        file: {
-          buffer: file.buffer,
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
+      await this.fileUploadQueue.add(
+        FILE_UPLOAD_JOB.UPLOAD_CONVERSATION_AVATAR,
+        {
+          conversationId: conversation.id,
+          file: {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
         },
-      });
+      );
     }
 
     // Create Participants
@@ -372,15 +375,18 @@ export class ConversationService {
           httpErrors.FILE_TOO_LARGE(file.originalname).code,
         );
       }
-      await this.messageQueue.add(MESSAGE_JOB.UPLOAD_CONVERSATION_AVATAR, {
-        conversationId: conversation.id,
-        file: {
-          buffer: file.buffer,
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
+      await this.fileUploadQueue.add(
+        FILE_UPLOAD_JOB.UPLOAD_CONVERSATION_AVATAR,
+        {
+          conversationId: conversation.id,
+          file: {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
         },
-      });
+      );
     }
     if (payload.type) conversation.type = payload.type;
     await this.conversationRepository.save(conversation);

@@ -84,6 +84,10 @@ export const httpErrors = {
     message: 'Account already existed.',
     code: 'ACCOUNT_EXISTED',
   },
+  USERNAME_EXISTED: {
+    message: 'Username already existed.',
+    code: 'USERNAME_EXISTED',
+  },
   ACCOUNT_HASH_NOT_MATCH: {
     message: 'Account adress and hash message are not matched.',
     code: 'ACCOUNT_HASH_NOT_MATCH',

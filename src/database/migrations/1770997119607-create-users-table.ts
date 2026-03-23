@@ -19,7 +19,7 @@ export class CreateUsersTable1770997119607 implements MigrationInterface {
                 "id" SERIAL PRIMARY KEY,
                 "email" VARCHAR(255) NOT NULL DEFAULT '',
                 "password" VARCHAR(255),
-                "username" VARCHAR(255),
+                "username" VARCHAR(255) UNIQUE,
                 "avatar_url" VARCHAR(255),
                 "background_url" VARCHAR(255),
                 "description" TEXT,

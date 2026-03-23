@@ -1,6 +1,6 @@
+import { AdminModule } from '@modules/admin/admin.module';
 import { CloudinaryModule } from '@modules/cloudinary/cloudinary.module';
 import { FriendshipModule } from '@modules/friendship/friendship.module';
-import { AdminModule } from '@modules/admin/admin.module';
 import { Module } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
 import { MessageAttachmentRepository } from '@repositories/message-attachment.repository';
@@ -12,9 +12,9 @@ import { TypeOrmExModule } from '@shared/decorators/typeorm.module';
 import { MessageController } from './message.controller';
 import { MessageService } from './message.service';
 
+import { FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import { BullModule } from '@nestjs/bullmq';
-import { MESSAGE_QUEUE } from '@constants/queue.constant';
-import { MessageProcessor } from './message.processor';
+import { FileUploadProcessor } from '../../shared/queues/file-upload.processor';
 
 @Module({
   imports: [
@@ -30,11 +30,11 @@ import { MessageProcessor } from './message.processor';
     FriendshipModule,
     AdminModule,
     BullModule.registerQueue({
-      name: MESSAGE_QUEUE,
+      name: FILE_UPLOAD_QUEUE,
     }),
   ],
   controllers: [MessageController],
-  providers: [MessageService, MessageProcessor],
+  providers: [MessageService, FileUploadProcessor],
   exports: [MessageService],
 })
 export class MessageModule {}
