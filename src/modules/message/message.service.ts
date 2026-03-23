@@ -1,4 +1,4 @@
-import { MESSAGE_JOB, MESSAGE_QUEUE } from '@constants/queue.constant';
+import { FILE_UPLOAD_JOB, FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import {
   ConversationType,
   MessageAttachmentStatus,
@@ -54,7 +54,7 @@ export class MessageService {
     private readonly messagePinRepository: MessagePinRepository,
     private readonly friendshipService: FriendshipService,
     private readonly systemConfigService: SystemConfigService,
-    @InjectQueue(MESSAGE_QUEUE) private readonly messageQueue: Queue,
+    @InjectQueue(FILE_UPLOAD_QUEUE) private readonly fileUploadQueue: Queue,
   ) {}
 
   // ==================== HELPER METHODS ====================
@@ -419,7 +419,7 @@ export class MessageService {
 
       // Add jobs to queue for background upload
       for (let i = 0; i < files.length; i++) {
-        await this.messageQueue.add(MESSAGE_JOB.UPLOAD_ATTACHMENT, {
+        await this.fileUploadQueue.add(FILE_UPLOAD_JOB.UPLOAD_ATTACHMENT, {
           messageId: message.id,
           attachmentId: messageAttachments[i].id,
           file: {
@@ -561,7 +561,7 @@ export class MessageService {
 
       // Add jobs to queue for background upload
       for (let i = 0; i < files.length; i++) {
-        await this.messageQueue.add(MESSAGE_JOB.UPLOAD_ATTACHMENT, {
+        await this.fileUploadQueue.add(FILE_UPLOAD_JOB.UPLOAD_ATTACHMENT, {
           messageId: message.id,
           attachmentId: newAttachments[i].id,
           file: {

@@ -9,11 +9,11 @@ import { RedisService } from '@modules/redis/redis.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
+import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
 import { Queue } from 'bullmq';
 import dayjs from 'dayjs';
 import { Transactional } from 'typeorm-transactional';
 import { generateOTP } from 'utils/code';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
 
 @Injectable()
 export class MailService {

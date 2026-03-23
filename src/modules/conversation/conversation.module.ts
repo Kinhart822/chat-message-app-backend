@@ -8,8 +8,8 @@ import { TypeOrmExModule } from '@shared/decorators/typeorm.module';
 import { ConversationController } from './conversation.controller';
 import { ConversationService } from './conversation.service';
 
+import { FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import { BullModule } from '@nestjs/bullmq';
-import { MESSAGE_QUEUE } from '@constants/queue.constant';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { MESSAGE_QUEUE } from '@constants/queue.constant';
     ]),
     CloudinaryModule,
     BullModule.registerQueue({
-      name: MESSAGE_QUEUE,
+      name: FILE_UPLOAD_QUEUE,
     }),
   ],
   controllers: [ConversationController],

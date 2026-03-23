@@ -1,4 +1,4 @@
-import { MESSAGE_JOB, MESSAGE_QUEUE } from '@constants/queue.constant';
+import { FILE_UPLOAD_JOB, FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
 import {
   MessageAttachmentStatus,
   MessageStatus,
@@ -9,18 +9,20 @@ import { Logger } from '@nestjs/common';
 import { ConversationRepository } from '@repositories/conversation.repository';
 import { MessageAttachmentRepository } from '@repositories/message-attachment.repository';
 import { MessageRepository } from '@repositories/message.repository';
+import { UserRepository } from '@repositories/user.repository';
 import { Job } from 'bullmq';
-import { SocketEmitterService } from '../socket/socket-emitter.service';
+import { SocketEmitterService } from '../../modules/socket/socket-emitter.service';
 
-@Processor(MESSAGE_QUEUE)
-export class MessageProcessor extends WorkerHost {
-  private readonly logger = new Logger(MessageProcessor.name);
+@Processor(FILE_UPLOAD_QUEUE)
+export class FileUploadProcessor extends WorkerHost {
+  private readonly logger = new Logger(FileUploadProcessor.name);
 
   constructor(
     private readonly cloudinaryService: CloudinaryService,
     private readonly messageAttachmentRepository: MessageAttachmentRepository,
     private readonly messageRepository: MessageRepository,
     private readonly conversationRepository: ConversationRepository,
+    private readonly userRepository: UserRepository,
     private readonly socketEmitterService: SocketEmitterService,
   ) {
     super();
@@ -28,15 +30,20 @@ export class MessageProcessor extends WorkerHost {
 
   async process(job: Job<any, any, string>): Promise<any> {
     switch (job.name) {
-      case MESSAGE_JOB.UPLOAD_ATTACHMENT:
+      case FILE_UPLOAD_JOB.UPLOAD_ATTACHMENT:
         return this.handleUploadAttachment(job);
-      case MESSAGE_JOB.UPLOAD_CONVERSATION_AVATAR:
+      case FILE_UPLOAD_JOB.UPLOAD_CONVERSATION_AVATAR:
         return this.handleUploadConversationAvatar(job);
+      case FILE_UPLOAD_JOB.UPLOAD_USER_AVATAR:
+        return this.handleUploadUserAvatar(job);
+      case FILE_UPLOAD_JOB.UPLOAD_USER_BACKGROUND:
+        return this.handleUploadUserBackground(job);
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }
   }
 
+  // ==================== HANDLE UPLOAD CONVERSATION AVATAR ====================
   private async handleUploadConversationAvatar(job: Job<any>) {
     const { conversationId, file } = job.data;
     const buffer = Buffer.from(file.buffer.data);
@@ -74,6 +81,95 @@ export class MessageProcessor extends WorkerHost {
     }
   }
 
+  // ==================== HANDLE UPLOAD USER AVATAR ====================
+  private async handleUploadUserAvatar(job: Job<any>) {
+    const { userId, file } = job.data;
+    const buffer = Buffer.from(file.buffer.data);
+    const multerFile: Express.Multer.File = {
+      ...file,
+      buffer,
+    } as any;
+
+    try {
+      const res = await this.cloudinaryService.uploadFile(multerFile);
+      const avatarUrl = (res as any).secure_url;
+
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        this.logger.warn(`User ${userId} not found for avatar upload`);
+        return;
+      }
+
+      await this.userRepository.update(userId, { avatarUrl });
+
+      this.socketEmitterService.emitUserProfileUpdate(user.email, {
+        userId,
+        avatarUrl,
+      });
+
+      this.logger.log(`Avatar of user ${userId} updated`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to upload avatar for user ${userId}`,
+        error.stack,
+      );
+
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        this.socketEmitterService.emitUserProfileUpdate(user.email, {
+          userId,
+          avatarUrl: null,
+          status: 'FAILED',
+        });
+      }
+    }
+  }
+
+  // ==================== HANDLE UPLOAD USER BACKGROUND ====================
+  private async handleUploadUserBackground(job: Job<any>) {
+    const { userId, file } = job.data;
+    const buffer = Buffer.from(file.buffer.data);
+    const multerFile: Express.Multer.File = {
+      ...file,
+      buffer,
+    } as any;
+
+    try {
+      const res = await this.cloudinaryService.uploadFile(multerFile);
+      const backgroundUrl = (res as any).secure_url;
+
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        this.logger.warn(`User ${userId} not found for background upload`);
+        return;
+      }
+
+      await this.userRepository.update(userId, { backgroundUrl });
+
+      this.socketEmitterService.emitUserProfileUpdate(user.email, {
+        userId,
+        backgroundUrl,
+      });
+
+      this.logger.log(`Background of user ${userId} updated`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to upload background for user ${userId}`,
+        error.stack,
+      );
+
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        this.socketEmitterService.emitUserProfileUpdate(user.email, {
+          userId,
+          backgroundUrl: null,
+          status: 'FAILED',
+        });
+      }
+    }
+  }
+
+  // ==================== HANDLE UPLOAD ATTACHMENT ====================
   private async handleUploadAttachment(job: Job<any>) {
     const { messageId, attachmentId, file, conversationId } = job.data;
 

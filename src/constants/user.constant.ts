@@ -92,21 +92,26 @@ export enum MessageAttachmentStatus {
   DELETED = 'DELETED',
 }
 
-export const FORGOT_RES = 'OTP for password reset has been sent to your email.';
+export const REGISTER_RES = 'OTP for registration has been sent to your email.';
+export const FORGOT_PASSWORD_RES =
+  'OTP for password reset has been sent to your email.';
 export const RESEND_RES = (type: IMailType) => {
   return `Verification code (${type}) has been resent.`;
 };
 export const RESET_PASSWORD_RES = 'Password has been reset successfully.';
 export const LOGOUT_RES = 'User has been logged out successfully.';
-
-export const SYSTEM_CONFIG_KEYS = {
-  MAX_NON_FRIEND_MESSAGES: 'MAX_NON_FRIEND_MESSAGES',
-};
+export const UPDATE_PROFILE_RES = 'Profile updated successfully.';
 
 export const VERIFY_ACCOUNT_RES = (type: IMailType) => {
   if (type === IMailType.SIGN_UP) {
     return 'Account verified and activated.';
   } else if (type === IMailType.FORGOT_PASSWORD) {
     return 'Verification successful. You can now reset your password.';
+  } else {
+    return 'Verification successful.';
   }
+};
+
+export const SYSTEM_CONFIG_KEYS = {
+  MAX_NON_FRIEND_MESSAGES: 'MAX_NON_FRIEND_MESSAGES',
 };
