@@ -1,5 +1,6 @@
+import { BullModule } from '@nestjs/bullmq';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RedisCacheModule } from './configs/cache.module';
@@ -8,18 +9,17 @@ import { validate } from './configs/env.validation';
 import { InterceptorsModule } from './interceptors/interceptor.module';
 import { LoggerHttpRequestMiddleware } from './middleware/logger.middleware';
 import { AdminModule } from './modules/admin/admin.module';
+import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GuardModule } from './modules/auth/guards/guard.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { ConversationModule } from './modules/conversation/conversation.module';
+import { FriendshipModule } from './modules/friendship/friendship.module';
+import { MessageModule } from './modules/message/message.module';
 import { SocketModule } from './modules/socket/socket.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { UserModule } from './modules/user/user.module';
 import { PipeModule } from './pipes/pipe.module';
-import { BullModule } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
-import { AuditLogModule } from './modules/audit-log/audit-log.module';
-import { ConversationModule } from './modules/conversation/conversation.module';
-import { MessageModule } from './modules/message/message.module';
-import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
-import { FriendshipModule } from './modules/friendship/friendship.module';
 
 @Module({
   imports: [
@@ -55,6 +55,7 @@ import { FriendshipModule } from './modules/friendship/friendship.module';
     MessageModule,
     CloudinaryModule,
     FriendshipModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

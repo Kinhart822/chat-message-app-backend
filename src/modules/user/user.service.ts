@@ -3,7 +3,11 @@ import { UPDATE_PROFILE_RES } from '@constants/user.constant';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { UserRepository } from '@repositories/user.repository';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import { Queue } from 'bullmq';
 import { plainToInstance } from 'class-transformer';
 import { Transactional } from 'typeorm-transactional';
@@ -24,7 +28,7 @@ export class UserService {
   async getProfile(userId: number): Promise<UserProfileResDto> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );
@@ -45,7 +49,7 @@ export class UserService {
     // Check user exists
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.ACCOUNT_NOT_FOUND.message,
         httpErrors.ACCOUNT_NOT_FOUND.code,
       );

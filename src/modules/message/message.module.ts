@@ -13,6 +13,7 @@ import { MessageController } from './message.controller';
 import { MessageService } from './message.service';
 
 import { FILE_UPLOAD_QUEUE } from '@constants/queue.constant';
+import { SystemConfigModule } from '@modules/system-config/system-config.module';
 import { BullModule } from '@nestjs/bullmq';
 import { FileUploadProcessor } from '../../shared/queues/file-upload.processor';
 
@@ -29,6 +30,7 @@ import { FileUploadProcessor } from '../../shared/queues/file-upload.processor';
     CloudinaryModule,
     FriendshipModule,
     AdminModule,
+    SystemConfigModule,
     BullModule.registerQueue({
       name: FILE_UPLOAD_QUEUE,
     }),

@@ -1,31 +1,65 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
 
-export class SystemConfigResDto {
-  @ApiProperty()
+export class AccountHistoryResDto {
+  @ApiProperty({
+    type: Number,
+    description: 'User ID',
+  })
+  @Expose({ name: 'id' })
+  userId: number;
+
+  @ApiProperty({
+    type: String,
+    description: 'Reason',
+  })
   @Expose()
-  id: number;
+  reason: string;
+
+  @ApiProperty({
+    type: String,
+    description: 'Status',
+  })
+  @Expose()
+  status: string;
+
+  @ApiProperty({
+    type: Number,
+    description: 'User ID',
+  })
+  @Expose()
+  actionBy: number;
+
+  @ApiProperty({
+    type: String,
+    description: 'Type',
+  })
+  @Expose()
+  type: string;
+}
+
+export class AdminDashboardResDto {
+  @ApiProperty()
+  totalUsers: number;
 
   @ApiProperty()
-  @Expose()
-  key: string;
+  activeUsers: number;
 
   @ApiProperty()
-  @Expose()
-  value: any;
+  inactiveUsers: number;
 
   @ApiProperty()
-  @Expose()
-  @Transform(({ value }) => (value ? new Date(value).toISOString() : null))
-  createdAt: string;
+  blockedUsers: number;
 
   @ApiProperty()
-  @Expose()
-  @Transform(({ value }) => (value ? new Date(value).toISOString() : null))
-  updatedAt: string;
+  deletedUsers: number;
 
   @ApiProperty()
-  @Expose()
-  @Transform(({ value }) => (value ? new Date(value).toISOString() : null))
-  deletedAt: string;
+  totalMessages: number;
+
+  @ApiProperty()
+  messagesToday: number;
+
+  @ApiProperty()
+  totalConversations: number;
 }

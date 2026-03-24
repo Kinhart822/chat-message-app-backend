@@ -48,8 +48,16 @@ export class SocketEmitterService implements OnModuleInit {
     }
   }
 
-  emitUserStatusChange(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.USER_STATUS_CHANGE, data);
+  emitUserBlocked(email: string, data: any): void {
+    this.emitEvent(email, SocketEvent.USER_BLOCKED, data);
+  }
+
+  emitUserUnblocked(email: string, data: any): void {
+    this.emitEvent(email, SocketEvent.USER_UNBLOCKED, data);
+  }
+
+  emitUserDeleted(email: string, data: any): void {
+    this.emitEvent(email, SocketEvent.USER_DELETED, data);
   }
 
   emitUserProfileUpdate(email: string, data: any): void {
@@ -203,12 +211,28 @@ export class SocketEmitterService implements OnModuleInit {
     this.emitEvent(email, SocketEvent.UNPIN_CONVERSATION, data);
   }
 
-  emitBlockConversation(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.BLOCK_CONVERSATION, data);
+  emitBlockConversation(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.BLOCK_CONVERSATION,
+      data,
+    );
   }
 
-  emitUnblockConversation(email: string, data: any): void {
-    this.emitEvent(email, SocketEvent.UNBLOCK_CONVERSATION, data);
+  emitUnblockConversation(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.UNBLOCK_CONVERSATION,
+      data,
+    );
+  }
+
+  emitDeleteConversation(conversationId: number, data: any): void {
+    this.emitEventToConversation(
+      conversationId,
+      SocketEvent.DELETE_CONVERSATION,
+      data,
+    );
   }
 
   emitRemoveConversation(email: string, data: any): void {

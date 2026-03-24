@@ -3,6 +3,7 @@ import { MessagePinFilterDto } from '@modules/message/dto/message.req.dto';
 import { CustomRepository } from '@shared/decorators/typeorm.decorator';
 import { normalizeDate } from 'utils/date';
 import { BaseRepository } from './base.repository';
+import { Order } from '@constants/pagination.constant';
 
 @CustomRepository(MessagePinEntity)
 export class MessagePinRepository extends BaseRepository<MessagePinEntity> {
@@ -29,7 +30,7 @@ export class MessagePinRepository extends BaseRepository<MessagePinEntity> {
       });
     }
 
-    query.orderBy('mp.pinnedAt', filterDto.direction);
+    query.orderBy('mp.pinnedAt', filterDto.direction || Order.DESC);
     query.skip(filterDto.skip).take(filterDto.limit);
 
     const [entities, total] = await query.getManyAndCount();

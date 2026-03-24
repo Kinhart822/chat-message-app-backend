@@ -14,6 +14,7 @@ export class CreateFriendshipsTable1773446410000 implements MigrationInterface {
         "user_id" INT NOT NULL,
         "friend_id" INT NOT NULL,
         "status" "friendship_status_enum" NOT NULL DEFAULT 'PENDING',
+        "blocked_by" INT,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
         "deleted_at" TIMESTAMP,

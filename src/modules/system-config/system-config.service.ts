@@ -1,12 +1,16 @@
 import { SystemConfigEntity } from '@entities/system-config.entity';
+import { SystemConfigResDto } from '@modules/system-config/dto/system-config.res.dto';
 import { Injectable } from '@nestjs/common';
 import { SystemConfigRepository } from '@repositories/system-config.repository';
 import { PageMetaDto } from '@shared/dtos/page-meta.dto';
 import { PageDto } from '@shared/dtos/page.dto';
-import { httpBadRequest, httpErrors } from '@shared/exceptions/http-exception';
+import {
+  httpBadRequest,
+  httpErrors,
+  httpNotFound,
+} from '@shared/exceptions/http-exception';
 import { plainToInstance } from 'class-transformer';
-import { SystemConfigFilterDto } from './dto/admin.req.dto';
-import { SystemConfigResDto } from './dto/admin.res.dto';
+import { SystemConfigFilterDto } from './dto/system-config.req.dto';
 
 @Injectable()
 export class SystemConfigService {
@@ -23,7 +27,7 @@ export class SystemConfigService {
       .where('config.key ILIKE :key', { key: `%${key}%` })
       .getOne();
     if (!config) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.message,
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.code,
       );
@@ -83,7 +87,7 @@ export class SystemConfigService {
   async updateSystemConfig(key: string, value: any) {
     const config = await this.validateKey(key);
     if (!config) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.message,
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.code,
       );
@@ -96,7 +100,7 @@ export class SystemConfigService {
   async deleteSystemConfig(key: string) {
     const config = await this.validateKey(key);
     if (!config) {
-      throw new httpBadRequest(
+      throw new httpNotFound(
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.message,
         httpErrors.SYSTEM_CONFIG_NOT_FOUND.code,
       );

@@ -8,7 +8,7 @@ export class SeedAdmin1773446420000 implements MigrationInterface {
         username: 'admin1',
         password:
           '$2b$12$ZdbZrO8qNRgUEe3CppqZV.8kwirnUceM2VevNquekxE2chqmZvRCC', // 123456
-        status: 'ACTIVE',
+        status: 'INACTIVE',
         access_method: 'EMAIL',
         role: 'ADMIN',
       },
@@ -17,34 +17,7 @@ export class SeedAdmin1773446420000 implements MigrationInterface {
         username: 'admin2',
         password:
           '$2b$12$ZdbZrO8qNRgUEe3CppqZV.8kwirnUceM2VevNquekxE2chqmZvRCC',
-        status: 'ACTIVE',
-        access_method: 'EMAIL',
-        role: 'ADMIN',
-      },
-      {
-        email: 'admin3@test.com',
-        username: 'admin3',
-        password:
-          '$2b$12$ZdbZrO8qNRgUEe3CppqZV.8kwirnUceM2VevNquekxE2chqmZvRCC',
-        status: 'ACTIVE',
-        access_method: 'EMAIL',
-        role: 'ADMIN',
-      },
-      {
-        email: 'admin4@test.com',
-        username: 'admin4',
-        password:
-          '$2b$12$ZdbZrO8qNRgUEe3CppqZV.8kwirnUceM2VevNquekxE2chqmZvRCC',
-        status: 'ACTIVE',
-        access_method: 'EMAIL',
-        role: 'ADMIN',
-      },
-      {
-        email: 'admin5@test.com',
-        username: 'admin5',
-        password:
-          '$2b$12$ZdbZrO8qNRgUEe3CppqZV.8kwirnUceM2VevNquekxE2chqmZvRCC',
-        status: 'ACTIVE',
+        status: 'INACTIVE',
         access_method: 'EMAIL',
         role: 'ADMIN',
       },
@@ -68,7 +41,7 @@ export class SeedAdmin1773446420000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `DELETE FROM "users" WHERE "email" IN ('admin1@test.com', 'admin2@test.com', 'admin3@test.com', 'admin4@test.com', 'admin5@test.com')`,
+      `DELETE FROM "users" WHERE "email" IN ('admin1@test.com', 'admin2@test.com')`,
     );
   }
 }

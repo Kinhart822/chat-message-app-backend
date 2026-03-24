@@ -11,7 +11,7 @@ import { UAParser } from 'ua-parser-js';
 
 import { AuditLogStatus } from '@constants/audit.constant';
 import { AuditLogService } from '@modules/audit-log/audit-log.service';
-import { CreateAuditLogDto } from '@modules/audit-log/dtos/audit-log-request.dto';
+import { CreateAuditLogDto } from '@modules/audit-log/dtos/audit-log.req.dto';
 
 @Injectable()
 export class AuditLogInterceptor implements NestInterceptor {

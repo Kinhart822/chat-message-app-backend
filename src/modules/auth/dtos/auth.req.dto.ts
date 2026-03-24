@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { StringField } from '@shared/decorators/field.decorator';
 import { IsEmail, IsEnum, IsJWT, IsNotEmpty } from 'class-validator';
 
-export class EmailBodyRequestDto {
+export class EmailBodyReqDto {
   @IsEmail()
   @ApiProperty({
     type: String,
@@ -16,7 +16,7 @@ export class EmailBodyRequestDto {
   email: string;
 }
 
-export class RegisterRequestDto extends EmailBodyRequestDto {
+export class RegisterReqDto extends EmailBodyReqDto {
   @StringField()
   @ApiProperty({
     type: String,
@@ -25,6 +25,16 @@ export class RegisterRequestDto extends EmailBodyRequestDto {
   })
   username: string;
 
+  @StringField({ minLength: 10, maxLength: 20 })
+  @ApiProperty({
+    type: String,
+    description: 'Password',
+    example: '123456',
+  })
+  password: string;
+}
+
+export class LoginReqDto extends EmailBodyReqDto {
   @StringField()
   @ApiProperty({
     type: String,
@@ -34,17 +44,7 @@ export class RegisterRequestDto extends EmailBodyRequestDto {
   password: string;
 }
 
-export class LoginBodyRequestDto extends EmailBodyRequestDto {
-  @StringField()
-  @ApiProperty({
-    type: String,
-    description: 'Password',
-    example: '123456',
-  })
-  password: string;
-}
-
-export class RefreshTokenRequestDto {
+export class RefreshTokenReqDto {
   @IsNotEmpty()
   @IsJWT()
   @ApiProperty({
@@ -56,7 +56,7 @@ export class RefreshTokenRequestDto {
   refreshToken: string;
 }
 
-export class VerifyEmailCodeRequestDto extends EmailBodyRequestDto {
+export class VerifyEmailCodeReqDto extends EmailBodyReqDto {
   @StringField()
   @ApiProperty({
     type: String,
@@ -76,7 +76,7 @@ export class VerifyEmailCodeRequestDto extends EmailBodyRequestDto {
   type: IMailType;
 }
 
-export class ResendCodeRequestDto extends EmailBodyRequestDto {
+export class ResendCodeReqDto extends EmailBodyReqDto {
   @IsNotEmpty()
   @IsEnum(IMailType)
   @ApiProperty({
@@ -87,7 +87,7 @@ export class ResendCodeRequestDto extends EmailBodyRequestDto {
   type: IMailType;
 }
 
-export class ResetPasswordRequestDto {
+export class ResetPasswordReqDto {
   @IsEmail()
   @ApiProperty({
     type: String,

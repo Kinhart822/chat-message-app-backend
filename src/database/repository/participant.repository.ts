@@ -3,6 +3,7 @@ import { ParticipantEntity } from '@entities/participant.entity';
 import { ParticipantFilterDto } from '@modules/user/dto/participant.req.dto';
 import { CustomRepository } from '@shared/decorators/typeorm.decorator';
 import { BaseRepository } from './base.repository';
+import { skip } from 'rxjs';
 
 @CustomRepository(ParticipantEntity)
 export class ParticipantRepository extends BaseRepository<ParticipantEntity> {
@@ -12,37 +13,34 @@ export class ParticipantRepository extends BaseRepository<ParticipantEntity> {
   ): Promise<{ entities: ParticipantEntity[]; total: number }> {
     const { keyword, statuses, roles } = filterDto;
 
-    const queryBuilder = this.createQueryBuilder('participant')
+    const query = this.createQueryBuilder('participant')
       .leftJoinAndSelect('participant.user', 'user')
       .where('participant.conversationId = :conversationId', {
         conversationId,
       });
 
     if (keyword) {
-      queryBuilder.andWhere('user.email LIKE :keyword', {
+      query.andWhere('user.email LIKE :keyword', {
         keyword: `%${keyword}%`,
       });
     }
 
     if (statuses && statuses.length > 0) {
-      queryBuilder.andWhere('participant.status IN (:...statuses)', {
+      query.andWhere('participant.status IN (:...statuses)', {
         statuses,
       });
     }
 
     if (roles && roles.length > 0) {
-      queryBuilder.andWhere('participant.role IN (:...roles)', {
+      query.andWhere('participant.role IN (:...roles)', {
         roles,
       });
     }
 
-    queryBuilder.orderBy(
-      `participant.createdAt`,
-      filterDto.direction || Order.DESC,
-    );
-    queryBuilder.skip(filterDto.skip).take(filterDto.limit);
+    query.orderBy(`participant.createdAt`, filterDto.direction || Order.DESC);
+    query.skip(filterDto.skip).take(filterDto.limit);
 
-    const [entities, total] = await queryBuilder.getManyAndCount();
+    const [entities, total] = await query.getManyAndCount();
     return { entities, total };
   }
 
