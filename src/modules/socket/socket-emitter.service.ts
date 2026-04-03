@@ -283,4 +283,8 @@ export class SocketEmitterService implements OnModuleInit {
   emitJoinRequestRejected(email: string, data: any): void {
     this.emitEvent(email, SocketEvent.JOIN_REQUEST_REJECTED, data);
   }
+
+  emitGlobalConversationUpdate(email: string, data: any): void {
+    this.emitEvent(email, SocketEvent.GLOBAL_CONVERSATION_UPDATE, data);
+  }
 }
