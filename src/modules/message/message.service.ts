@@ -49,6 +49,7 @@ import {
   MessagePinResDto,
   MessageResDto,
 } from './dto/message.res.dto';
+import { ConversationResDto } from '../conversation/dto/conversation.res.dto';
 
 @Injectable()
 export class MessageService {
@@ -208,6 +209,57 @@ export class MessageService {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  /**
+   * Map conversation to response DTO
+   */
+  private mapConversationToResponse(
+    conversation: ConversationEntity,
+  ): ConversationResDto {
+    return plainToInstance(ConversationResDto, conversation, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  /**
+   * Emit global conversation update to all participants
+   */
+  private async emitGlobalUpdate(
+    conversationId: number,
+    lastMessage?: MessageEntity,
+  ) {
+    try {
+      const participants = await this.participantRepository.find({
+        where: { conversationId },
+        relations: ['user'],
+      });
+
+      const conversation = await this.conversationRepository.findOne({
+        where: { id: conversationId },
+      });
+
+      if (!conversation) return;
+
+      const conversationRes = this.mapConversationToResponse(conversation);
+
+      for (const participant of participants) {
+        if (participant.user?.email) {
+          this.socketEmitterService.emitGlobalConversationUpdate(
+            participant.user.email,
+            {
+              conversation: conversationRes,
+              unreadCount: participant.unreadCount,
+              lastMessage: lastMessage
+                ? this.mapMessageToResponse(lastMessage)
+                : undefined,
+            },
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to emit global conversation update', error);
+    }
   }
 
   /**
@@ -518,6 +570,10 @@ export class MessageService {
 
     // Emit message to conversation room
     this.socketEmitterService.emitNewMessage(dto.conversationId, message);
+
+    // Emit global conversation update to all participants
+    this.emitGlobalUpdate(dto.conversationId, message);
+
     return message;
   }
 
@@ -691,6 +747,9 @@ export class MessageService {
       updatedMessage,
     );
 
+    // Emit global conversation update to all participants
+    this.emitGlobalUpdate(message.conversationId, updatedMessage);
+
     return this.mapMessageToResponse(updatedMessage);
   }
 
@@ -723,6 +782,10 @@ export class MessageService {
       conversationId: dto.conversationId,
       participantId: participant.id,
     });
+
+    // Emit global conversation update to all participants
+    this.emitGlobalUpdate(dto.conversationId);
+
     return true;
   }
 
